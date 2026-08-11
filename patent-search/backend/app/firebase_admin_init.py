@@ -31,8 +31,9 @@ def initialize_firebase() -> bool:
 
     if not cred_file.exists():
         logger.warning(
-            "Firebase service account file not found at '%s'. "
-            "Authentication features will be disabled.",
+            "[FIREBASE] Service account file NOT FOUND at '%s'. "
+            "History saving and token verification will be DISABLED. "
+            "Searches will still work but will NOT be saved to Firestore.",
             cred_path,
         )
         _firebase_available = False
@@ -42,10 +43,23 @@ def initialize_firebase() -> bool:
         cred = credentials.Certificate(str(cred_file))
         _firebase_app = firebase_admin.initialize_app(cred)
         _firebase_available = True
-        logger.info("Firebase Admin SDK initialized successfully.")
+        project_id = cred_file.read_text()
+        # Extract project_id from file for logging
+        import json
+        sa_data = json.loads(cred_file.read_text())
+        logger.info(
+            "[FIREBASE] Firebase Admin SDK initialized successfully. "
+            "Project: '%s', Service Account: '%s'",
+            sa_data.get("project_id", "unknown"),
+            sa_data.get("client_email", "unknown"),
+        )
         return True
     except Exception as exc:
-        logger.error("Failed to initialize Firebase Admin SDK: %s", exc)
+        logger.error(
+            "[FIREBASE] Failed to initialize Firebase Admin SDK: %s. "
+            "History saving will be DISABLED. Searches will still work.",
+            exc,
+        )
         _firebase_available = False
         return False
 

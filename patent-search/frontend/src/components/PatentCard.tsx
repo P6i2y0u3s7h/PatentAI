@@ -11,7 +11,35 @@ interface PatentCardProps {
 export const PatentCard: React.FC<PatentCardProps> = ({ patent, index }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(() => {
+    try {
+      const saved = localStorage.getItem('patent_bookmarks');
+      if (saved) {
+        const ids: string[] = JSON.parse(saved);
+        return ids.includes(patent.id);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return false;
+  });
+
+  const toggleBookmark = () => {
+    const nextState = !bookmarked;
+    setBookmarked(nextState);
+    try {
+      const saved = localStorage.getItem('patent_bookmarks');
+      let ids: string[] = saved ? JSON.parse(saved) : [];
+      if (nextState) {
+        if (!ids.includes(patent.id)) ids.push(patent.id);
+      } else {
+        ids = ids.filter((id) => id !== patent.id);
+      }
+      localStorage.setItem('patent_bookmarks', JSON.stringify(ids));
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const matchPercent = Math.round(patent.similarity_score * 100);
 
@@ -145,7 +173,7 @@ export const PatentCard: React.FC<PatentCardProps> = ({ patent, index }) => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setBookmarked(!bookmarked)}
+            onClick={toggleBookmark}
             className={`p-2 rounded-lg border text-xs transition-colors flex items-center gap-1 ${
               bookmarked
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'

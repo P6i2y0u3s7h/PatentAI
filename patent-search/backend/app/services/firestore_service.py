@@ -50,7 +50,7 @@ def save_search_history(
         }
 
         db.collection(COLLECTION_NAME).document(entry_id).set(doc_data)
-        logger.debug("Saved search history entry %s for user %s.", entry_id, user_id)
+        logger.info("[HISTORY] Saved search history entry %s for user %s (source=%s).", entry_id, user_id, source)
 
         return HistoryEntry(
             id=entry_id,
@@ -73,16 +73,32 @@ def get_search_history(user_id: str, limit: int = 50) -> list[HistoryEntry]:
     """Retrieve the most recent search history entries for a user."""
     try:
         db = _get_db()
-        docs = (
-            db.collection(COLLECTION_NAME)
-            .where("user_id", "==", user_id)
-            .order_by("created_at", direction="DESCENDING")
-            .limit(limit)
-            .stream()
-        )
+        raw_docs = []
+
+        try:
+            # Try indexed ordered query first
+            docs = (
+                db.collection(COLLECTION_NAME)
+                .where("user_id", "==", user_id)
+                .order_by("created_at", direction="DESCENDING")
+                .limit(limit)
+                .stream()
+            )
+            raw_docs = list(docs)
+        except Exception as query_exc:
+            logger.warning(
+                "[HISTORY] Ordered Firestore query failed (%s). Falling back to un-ordered query + in-memory sort.",
+                query_exc,
+            )
+            docs = (
+                db.collection(COLLECTION_NAME)
+                .where("user_id", "==", user_id)
+                .stream()
+            )
+            raw_docs = list(docs)
 
         entries: list[HistoryEntry] = []
-        for doc in docs:
+        for doc in raw_docs:
             data = doc.to_dict()
             created_at = data.get("created_at")
             # Firestore Timestamps need conversion
@@ -103,6 +119,12 @@ def get_search_history(user_id: str, limit: int = 50) -> list[HistoryEntry]:
                     source=data.get("source", "text"),
                 )
             )
+
+        # Sort in-memory to ensure newest first regardless of index status
+        entries.sort(key=lambda x: x.created_at, reverse=True)
+        entries = entries[:limit]
+
+        logger.info("[HISTORY] Retrieved %d search history entries for user '%s'.", len(entries), user_id)
         return entries
     except FirestoreError:
         raise
@@ -135,7 +157,7 @@ def delete_history_entry(entry_id: str, user_id: str) -> bool:
             return False
 
         doc_ref.delete()
-        logger.debug("Deleted history entry %s.", entry_id)
+        logger.info("[HISTORY] Deleted history entry %s for user %s.", entry_id, user_id)
         return True
     except FirestoreError:
         raise

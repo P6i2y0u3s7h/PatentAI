@@ -78,7 +78,11 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({ entries, isLoading }
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button
-                    onClick={() => deleteMutation.mutate(entry.id)}
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this history entry?')) {
+                        deleteMutation.mutate(entry.id);
+                      }
+                    }}
                     disabled={deleteMutation.isPending}
                     className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
                     title="Delete Entry"

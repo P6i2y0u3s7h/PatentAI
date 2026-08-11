@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Callable
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
@@ -85,10 +86,9 @@ class InMemoryRateLimiter(BaseHTTPMiddleware):
 
         if len(self._requests[client_ip]) >= self.max_requests:
             logger.warning("Rate limit exceeded for IP: %s", client_ip)
-            return Response(
-                content='{"error": "Too many requests. Please wait before trying again.", "status_code": 429}',
+            return JSONResponse(
+                content={"error": "Too many requests. Please wait before trying again.", "status_code": 429},
                 status_code=429,
-                media_type="application/json",
                 headers={
                     "Retry-After": str(self.window_seconds),
                     "X-RateLimit-Limit": str(self.max_requests),

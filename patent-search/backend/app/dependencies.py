@@ -43,25 +43,28 @@ async def get_current_user(
     token = parts[1]
 
     if not get_firebase_available():
-        # In development without Firebase, allow any non-empty token
-        logger.warning("Firebase not available — skipping token verification.")
+        # In development without Firebase Admin SDK initialized
+        logger.warning("[AUTH] Firebase Admin not available — returning dev-user fallback.")
         return {"uid": "dev-user", "email": "dev@patentai.local"}
 
     try:
         decoded = firebase_auth.verify_id_token(token)
+        logger.info("[AUTH] Verified token for user_id='%s' (%s)", decoded.get("uid"), decoded.get("email"))
         return decoded
     except firebase_auth.ExpiredIdTokenError:
+        logger.warning("[AUTH] Token expired for request.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired. Please log in again.",
         )
     except firebase_auth.InvalidIdTokenError as exc:
+        logger.warning("[AUTH] Invalid token provided: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {exc}",
         )
     except Exception as exc:
-        logger.error("Token verification error: %s", exc)
+        logger.error("[AUTH] Token verification error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials.",
@@ -72,12 +75,13 @@ async def get_optional_user(
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict | None:
     """
-    Same as get_current_user but returns None instead of raising if no token.
+    Same as get_current_user but returns None instead of raising if no token or invalid token.
     Use for endpoints that work with or without authentication.
     """
     if authorization is None:
         return None
     try:
         return await get_current_user(authorization)
-    except HTTPException:
+    except HTTPException as exc:
+        logger.warning("[AUTH] Optional auth token rejected (%s) — proceeding as unauthenticated.", exc.detail)
         return None

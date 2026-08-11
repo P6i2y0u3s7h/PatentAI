@@ -35,13 +35,19 @@ async def search_by_text(
             detail="Query text is too short after cleaning. Please provide more detail.",
         )
 
+    logger.info("[SEARCH] text query: %d chars, top_k=%d", len(cleaned_query), body.top_k)
+
     embedding = embedding_service.get_embedding(cleaned_query)
+    logger.info("[EMBEDDING] shape=%s, norm=%.4f", embedding.shape, float((embedding ** 2).sum() ** 0.5))
+
     results = search_service.search(embedding, body.top_k, cleaned_query)
+    logger.info("[FAISS] returned %d results", len(results))
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
     # Persist to Firestore if user is authenticated
     if user:
+        logger.info("[HISTORY] User authenticated (uid='%s'). Saving search history...", user.get("uid"))
         try:
             top = results[0] if results else None
             firestore_service.save_search_history(
@@ -53,7 +59,9 @@ async def search_by_text(
                 source="text",
             )
         except Exception as exc:
-            logger.warning("Failed to save search history (non-fatal): %s", exc)
+            logger.warning("[HISTORY] Failed to save search history (non-fatal): %s", exc)
+    else:
+        logger.info("[HISTORY] Request unauthenticated — search history will not be saved.")
 
     return SearchResponse(
         results=results,
@@ -71,19 +79,45 @@ async def search_by_pdf(
 ) -> SearchResponse:
     """
     Extract text from an uploaded PDF and perform semantic patent search.
+
+    The request MUST use multipart/form-data with:
+      - file: the PDF binary
+      - top_k: (optional) number of results, default 10
     """
     start_ms = time.perf_counter() * 1000
 
+    logger.info(
+        "[PDF] received: filename='%s', content_type='%s', top_k=%d",
+        file.filename or "unknown",
+        file.content_type or "unknown",
+        top_k,
+    )
+
     file_bytes = await file.read()
+    logger.info("[PDF] size=%.2f KB (%d bytes)", len(file_bytes) / 1024, len(file_bytes))
+
     extracted_text = pdf_service.extract_text_from_pdf(file_bytes, file.filename or "")
     cleaned_query = clean_text(extracted_text)
 
+    logger.info(
+        "[PDF] extracted=%d chars, cleaned=%d chars, words=%d",
+        len(extracted_text),
+        len(cleaned_query),
+        len(cleaned_query.split()),
+    )
+
     embedding = embedding_service.get_embedding(cleaned_query)
+    logger.info("[EMBEDDING] shape=%s, norm=%.4f", embedding.shape, float((embedding ** 2).sum() ** 0.5))
+
     results = search_service.search(embedding, top_k, cleaned_query)
+    logger.info("[FAISS] PDF search returned %d results", len(results))
+    if results:
+        logger.info("[FAISS] top result: '%s' (score=%.4f)", results[0].title, results[0].similarity_score)
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
     if user:
+        logger.info("[HISTORY] User authenticated (uid='%s'). Saving PDF search history...", user.get("uid"))
         try:
             top = results[0] if results else None
             firestore_service.save_search_history(
@@ -95,7 +129,9 @@ async def search_by_pdf(
                 source="pdf",
             )
         except Exception as exc:
-            logger.warning("Failed to save search history (non-fatal): %s", exc)
+            logger.warning("[HISTORY] Failed to save PDF search history (non-fatal): %s", exc)
+    else:
+        logger.info("[HISTORY] Request unauthenticated — PDF search history will not be saved.")
 
     return SearchResponse(
         results=results,

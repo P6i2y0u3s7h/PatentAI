@@ -9,7 +9,7 @@ from typing import Optional
 
 from app.config import get_settings
 from app.core.exceptions import ModelNotLoadedError
-from app.utils import clean_text, truncate_text
+from app.utils import clean_text, extractive_summarize, truncate_text
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ def load_summarization_model() -> None:
             _model_loaded = True
             logger.info("Summarization model loaded successfully.")
         except Exception as exc:
-            logger.error("Failed to load summarization model: %s", exc)
-            raise
+            logger.warning("BART summarization model unavailable, fallback enabled: %s", exc)
+            _model_loaded = False
 
 
 def is_summarization_model_loaded() -> bool:
@@ -48,28 +48,31 @@ def is_summarization_model_loaded() -> bool:
 
 def summarize(text: str) -> str:
     """
-    Summarize patent text using BART-large-CNN.
+    Summarize patent text using BART-large-CNN with extractive fallback.
 
     Truncates input to the model's effective token budget before inference.
     Returns the generated summary string.
     """
-    if not _model_loaded or _pipeline is None:
-        raise ModelNotLoadedError("summarization")
-
     settings = get_settings()
     cleaned = clean_text(text)
 
-    # Truncate to stay within BART's 1024-token limit
-    truncated = truncate_text(cleaned, max_tokens=settings.MAX_SUMMARY_INPUT_TOKENS)
+    if not _model_loaded or _pipeline is None:
+        logger.info("Using extractive summary fallback.")
+        return extractive_summarize(cleaned, max_sentences=4)
 
-    result = _pipeline(
-        truncated,
-        max_length=settings.MAX_SUMMARY_LENGTH,
-        min_length=settings.MIN_SUMMARY_LENGTH,
-        do_sample=False,
-        num_beams=4,
-        early_stopping=True,
-    )
+    try:
+        truncated = truncate_text(cleaned, max_tokens=settings.MAX_SUMMARY_INPUT_TOKENS)
+        result = _pipeline(
+            truncated,
+            max_length=settings.MAX_SUMMARY_LENGTH,
+            min_length=settings.MIN_SUMMARY_LENGTH,
+            do_sample=False,
+            num_beams=4,
+            early_stopping=True,
+        )
+        summary: str = result[0]["summary_text"]  # type: ignore[index]
+        return summary.strip()
+    except Exception as exc:
+        logger.warning("BART inference error, executing extractive fallback: %s", exc)
+        return extractive_summarize(cleaned, max_sentences=4)
 
-    summary: str = result[0]["summary_text"]  # type: ignore[index]
-    return summary.strip()

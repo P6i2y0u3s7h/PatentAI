@@ -82,3 +82,35 @@ def truncate_text(text: str, max_tokens: int = 1024) -> str:
     if len(words) <= max_words:
         return text
     return " ".join(words[:max_words]) + "…"
+
+
+def extractive_summarize(text: str, max_sentences: int = 3) -> str:
+    """
+    Generate an extractive summary using sentence TF scoring.
+    Used as an immediate, lightweight fallback if neural transformers are unavailable.
+    """
+    cleaned = clean_text(text)
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", cleaned) if len(s.strip()) > 15]
+
+    if not sentences:
+        return cleaned[:300]
+    if len(sentences) <= max_sentences:
+        return " ".join(sentences)
+
+    keywords = extract_keywords(cleaned, top_n=20)
+    kw_set = set(keywords)
+
+    scored_sentences = []
+    for idx, sentence in enumerate(sentences):
+        words = set(re.findall(r"\b[a-z]{3,}\b", sentence.lower()))
+        score = len(words & kw_set)
+        # Position bonus for lead sentences
+        if idx == 0:
+            score += 2
+        scored_sentences.append((score, idx, sentence))
+
+    scored_sentences.sort(key=lambda x: x[0], reverse=True)
+    top_sentences = sorted(scored_sentences[:max_sentences], key=lambda x: x[1])
+
+    return " ".join(s[2] for s in top_sentences)
+
