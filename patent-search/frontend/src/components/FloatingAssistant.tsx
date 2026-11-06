@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   X,
   Send,
@@ -44,8 +44,27 @@ export const FloatingAssistant: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // AlgoInsight-inspired interactive states
+  const prefersReducedMotion = useReducedMotion();
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [burstActive, setBurstActive] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+
   // Hide the floating widget when user is already on the dedicated /assistant page
   const isDedicatedAssistantPage = location.pathname === '/assistant';
+
+  // Auto-show friendly greeting speech bubble (inspired by AlgoInsight)
+  useEffect(() => {
+    if (sessionStorage.getItem('patentai:greetingDismissed') || isDedicatedAssistantPage) {
+      return;
+    }
+    const timer = window.setTimeout(() => setShowGreeting(true), 1500);
+    const autoDismiss = window.setTimeout(() => setShowGreeting(false), 9500);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(autoDismiss);
+    };
+  }, [isDedicatedAssistantPage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -151,33 +170,159 @@ export const FloatingAssistant: React.FC = () => {
     <>
       {/* ── FLOATING TRIGGER BUTTON (BOTTOM RIGHT) ───────────────────────── */}
       <div className="fixed bottom-6 right-6 z-50">
+        {/* Dismissable Speech Greeting Bubble (inspired by AlgoInsight) */}
+        <AnimatePresence>
+          {!isOpen && showGreeting && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+              className="absolute bottom-full right-0 mb-3.5 max-w-[240px] pointer-events-auto"
+            >
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setShowGreeting(false);
+                  setIsOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowGreeting(false);
+                    setIsOpen(true);
+                  }
+                }}
+                className="relative block text-left rounded-2xl rounded-br-sm bg-[#0B1020]/95 backdrop-blur-xl border border-teal-500/35 shadow-[0_10px_32px_rgba(45,212,191,0.28)] px-3.5 py-2.5 pr-7 text-slate-100 hover:border-teal-400/60 transition-all cursor-pointer group"
+              >
+                <div className="text-[11px] font-bold text-teal-300 mb-0.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-ping" />
+                  PatentAI Assistant
+                </div>
+                <div className="text-xs text-slate-300 leading-snug">
+                  How may I help with your patent prior-art today?
+                </div>
+                <button
+                  type="button"
+                  aria-label="Dismiss greeting"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowGreeting(false);
+                    sessionStorage.setItem('patentai:greetingDismissed', '1');
+                  }}
+                  className="absolute top-1.5 right-1.5 p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+                <span className="absolute -bottom-1.5 right-6 w-3 h-3 rotate-45 bg-[#0B1020] border-r border-b border-teal-500/35" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Spring Entrance & Motion Wrapper (AlgoInsight inspired) */}
         <motion.div
-          animate={{ y: [0, -7, 0] }}
-          transition={{
-            duration: 3.6,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
+          initial={{ scale: 0, opacity: 0, rotate: -30 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.3 }}
           className="relative inline-block group"
         >
-          {/* Breathing Turquoise Outer Glow Halo */}
-          <div className="absolute inset-[-6px] rounded-full bg-gradient-to-r from-teal-400/50 via-cyan-400/40 to-teal-400/50 blur-xl animate-breathing-turquoise pointer-events-none group-hover:scale-125 group-hover:opacity-100 transition-all duration-300" />
-
-          {/* Springy Bounce Trigger Button */}
-          <motion.button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.88, rotate: -2 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-            aria-label="Open AI Patent Assistant"
-            className="relative z-10 block rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-400/50 cursor-pointer shadow-[0_0_26px_rgba(45,212,191,0.65)] hover:shadow-[0_0_42px_rgba(45,212,191,0.95)] transition-shadow duration-300"
+          {/* Continuous Vertical Floating Sway */}
+          <motion.div
+            animate={prefersReducedMotion ? {} : { y: [0, -6, 0] }}
+            transition={{
+              duration: 3.6,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="relative"
           >
-            <AssistantAvatar size={56} animate={true} />
-          </motion.button>
+            {/* 1. Radar Ping Wave (from AlgoInsight) */}
+            <span
+              className="absolute inset-0 rounded-full bg-teal-400/30 animate-ping pointer-events-none"
+              style={{ animationDuration: '2.4s' }}
+            />
 
-          {/* Tooltip on hover when closed */}
-          {!isOpen && (
+            {/* 2. Breathing Turquoise Outer Glow Halo */}
+            <div className="absolute inset-[-6px] rounded-full bg-gradient-to-r from-teal-400/50 via-cyan-400/40 to-teal-400/50 blur-xl animate-breathing-turquoise pointer-events-none group-hover:scale-125 group-hover:opacity-100 transition-all duration-300" />
+
+            {/* 3. Tap-Burst Shockwave Ripple (from AlgoInsight) */}
+            <motion.span
+              key={`tap-burst-${tapCount}`}
+              className="absolute inset-0 rounded-full border-2 border-teal-300/70 pointer-events-none"
+              initial={false}
+              whileTap={{
+                scale: [1, 1.8],
+                opacity: [0.8, 0],
+                transition: { duration: 0.55, ease: 'easeOut' },
+              }}
+            />
+
+            {/* 4. Particle Burst Sparks (8 micro-particles radiating outwards on click) */}
+            {burstActive && !prefersReducedMotion && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                {Array.from({ length: 8 }).map((_, idx) => {
+                  const angle = (idx / 8) * Math.PI * 2;
+                  const x = Math.cos(angle) * 36;
+                  const y = Math.sin(angle) * 36;
+                  return (
+                    <motion.span
+                      key={`spark-${idx}`}
+                      className="absolute w-1.5 h-1.5 rounded-full bg-teal-300 shadow-[0_0_8px_#2dd4bf]"
+                      initial={{ opacity: 1, scale: 0.6, x: 0, y: 0 }}
+                      animate={{ opacity: 0, scale: 1.3, x, y }}
+                      transition={{ duration: 0.65, ease: 'easeOut' }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 5. Main Floating Robot Button with AlgoInsight Hover & Tap Physics */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                setTapCount((p) => p + 1);
+                setBurstActive(true);
+                setTimeout(() => setBurstActive(false), 750);
+                setIsOpen(!isOpen);
+                setShowGreeting(false);
+              }}
+              whileHover={
+                prefersReducedMotion
+                  ? { scale: 1.05 }
+                  : {
+                      scale: 1.08,
+                      rotate: [0, -6, 6, -3, 0],
+                      transition: { rotate: { duration: 0.5 } },
+                    }
+              }
+              whileTap={
+                prefersReducedMotion
+                  ? { scale: 0.9 }
+                  : {
+                      scale: 0.82,
+                      rotate: -12,
+                      transition: { type: 'spring', stiffness: 500, damping: 14 },
+                    }
+              }
+              aria-label="Open AI Patent Assistant"
+              className="relative z-10 block rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-400/50 cursor-pointer shadow-[0_8px_32px_rgba(20,184,166,0.45),0_0_0_1px_rgba(45,212,191,0.4)_inset] hover:shadow-[0_12px_38px_rgba(20,184,166,0.7),0_0_0_1px_rgba(45,212,191,0.6)_inset] transition-all duration-300"
+            >
+              <AssistantAvatar
+                size={56}
+                animate={true}
+                interactive={true}
+                isClicked={burstActive}
+              />
+
+              {/* Online Status Pulse Dot (inspired by AlgoInsight) */}
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-[#0B1020] animate-pulse pointer-events-none shadow-[0_0_8px_#34d399]" />
+            </motion.button>
+          </motion.div>
+
+          {/* Tooltip on hover when closed and greeting not active */}
+          {!isOpen && !showGreeting && (
             <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#0B1020]/95 border border-teal-500/35 text-xs text-slate-200 whitespace-nowrap shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 backdrop-blur-xl shadow-teal-500/10">
               <span className="font-semibold text-teal-300">Ask PatentAI</span>
             </div>
@@ -186,8 +331,15 @@ export const FloatingAssistant: React.FC = () => {
       </div>
 
       {/* ── EXPANDABLE FLOATING CHAT WINDOW ───────────────────────────────── */}
-      {isOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-8rem)] rounded-3xl bg-[#0B1020]/95 border border-white/[0.1] shadow-2xl shadow-black/95 flex flex-col overflow-hidden backdrop-blur-2xl animate-fadeIn">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.88, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: 20, transition: { duration: 0.18 } }}
+            transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-8rem)] rounded-3xl bg-[#0B1020]/95 border border-white/[0.1] shadow-2xl shadow-black/95 flex flex-col overflow-hidden backdrop-blur-2xl"
+          >
           {/* Header */}
           <div className="h-14 px-4 border-b border-slate-800/80 bg-slate-900/90 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
@@ -416,8 +568,9 @@ export const FloatingAssistant: React.FC = () => {
               Powered by PatentAI RAG • Groq & Gemini
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+    </AnimatePresence>
     </>
   );
 };
