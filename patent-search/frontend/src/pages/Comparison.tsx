@@ -166,29 +166,6 @@ export const Comparison: React.FC = () => {
         )}
       </div>
 
-      {/* Preset Pairs Shortcut */}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-        <span className="font-semibold text-slate-500">Quick Samples:</span>
-        <button
-          onClick={() => selectPredefinedPair('US-2024-001', 'US-2024-005')}
-          className="px-3 py-1.5 rounded-lg glass-card border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-white transition-colors"
-        >
-          Quantum vs. Neuromorphic Accelerator
-        </button>
-        <button
-          onClick={() => selectPredefinedPair('US-2024-003', 'US-2025-011')}
-          className="px-3 py-1.5 rounded-lg glass-card border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-white transition-colors"
-        >
-          Autonomous Lidar vs. Drone Swarm
-        </button>
-        <button
-          onClick={() => selectPredefinedPair('US-2024-002', 'US-2025-007')}
-          className="px-3 py-1.5 rounded-lg glass-card border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-white transition-colors"
-        >
-          Federated Privacy vs. Zero-Knowledge ID
-        </button>
-      </div>
-
       {/* ── Selection Workspace ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
         {/* Patent A Selector */}
