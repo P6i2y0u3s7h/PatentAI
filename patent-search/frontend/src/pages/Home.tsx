@@ -512,17 +512,17 @@ export const Home: React.FC = () => {
             className="neural-card p-6 rounded-2xl group flex flex-col justify-between"
           >
             <div>
-              <div className="w-12 h-12 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 mb-5 group-hover:scale-110 transition-transform shadow-sm shadow-teal-500/20">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 group-hover:scale-110 transition-transform shadow-sm shadow-cyan-500/20">
                 <Bot size={22} />
               </div>
-              <h3 className="text-base font-bold text-white group-hover:text-teal-300 transition-colors">
+              <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
                 AI Patent Assistant
               </h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                 Conversational RAG agent grounded on actual patent disclosures with PDF upload context.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold text-teal-400">
+            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold text-cyan-400">
               <span>Open Assistant</span>
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </div>
@@ -633,7 +633,7 @@ export const Home: React.FC = () => {
             </div>
             <div>
               <p className="text-3xl sm:text-5xl font-extrabold font-heading text-white tracking-tight">
-                100<span className="text-teal-400 text-2xl sm:text-3xl">%</span>
+                100<span className="text-cyan-400 text-2xl sm:text-3xl">%</span>
               </p>
               <p className="text-xs text-slate-400 mt-2 font-mono uppercase tracking-wider">Grounded Evidence</p>
             </div>

@@ -154,20 +154,20 @@ export const FloatingAssistant: React.FC = () => {
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Open AI Patent Assistant"
-          className="relative group p-1 rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-400/40 transition-transform duration-300 active:scale-90"
+          className="relative group p-1 rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/40 transition-transform duration-300 active:scale-90"
         >
-          {/* Outer Radiant Glowing Halo */}
-          <div className="absolute inset-0 rounded-full bg-teal-400/35 blur-xl group-hover:bg-teal-300/50 group-hover:scale-125 transition-all duration-300" />
+          {/* Outer Radiant Glowing Halo with Cyan to Violet Neural Theme */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/40 via-blue-500/35 to-violet-500/40 blur-xl group-hover:scale-125 group-hover:from-cyan-400/60 group-hover:to-violet-400/60 transition-all duration-300" />
 
-          {/* Glowing turquoise robot avatar button with floating animation */}
-          <div className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(45,212,191,0.6)] group-hover:shadow-[0_0_36px_rgba(45,212,191,0.9)] group-hover:scale-110 transition-all duration-300 hover:-translate-y-1">
+          {/* Glowing themed robot avatar button with floating animation */}
+          <div className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_36px_rgba(6,182,212,0.9)] group-hover:scale-110 transition-all duration-300 hover:-translate-y-1">
             <AssistantAvatar size={54} animate={true} />
           </div>
 
           {/* Tooltip on hover when closed */}
           {!isOpen && (
-            <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#0B1020]/95 border border-teal-500/30 text-xs text-slate-200 whitespace-nowrap shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 backdrop-blur-xl">
-              <span className="font-semibold text-teal-300">Ask PatentAI</span>
+            <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#0B1020]/95 border border-cyan-500/30 text-xs text-slate-200 whitespace-nowrap shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 backdrop-blur-xl shadow-cyan-500/10">
+              <span className="font-semibold text-cyan-300">Ask PatentAI</span>
             </div>
           )}
         </button>
@@ -183,7 +183,7 @@ export const FloatingAssistant: React.FC = () => {
               <div>
                 <h3 className="text-xs font-bold font-heading text-slate-100 flex items-center gap-2">
                   AI Patent Assistant
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-teal-500/15 text-teal-300 font-mono border border-teal-500/30">
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 font-mono border border-cyan-500/30">
                     RAG Live
                   </span>
                 </h3>
@@ -223,9 +223,9 @@ export const FloatingAssistant: React.FC = () => {
 
           {/* Uploaded PDF Notice */}
           {uploadedDocName && (
-            <div className="px-3.5 py-1.5 bg-teal-950/40 border-b border-teal-800/30 flex items-center justify-between text-[11px] text-teal-300">
+            <div className="px-3.5 py-1.5 bg-cyan-950/40 border-b border-cyan-800/30 flex items-center justify-between text-[11px] text-cyan-300">
               <div className="flex items-center gap-1.5 min-w-0">
-                <FileText size={13} className="text-teal-400 shrink-0" />
+                <FileText size={13} className="text-cyan-400 shrink-0" />
                 <span className="truncate font-mono">{uploadedDocName}</span>
               </div>
               <button
@@ -274,10 +274,10 @@ export const FloatingAssistant: React.FC = () => {
                       key={i}
                       type="button"
                       onClick={() => handleSendMessage(prompt)}
-                      className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 hover:border-teal-500/40 text-xs text-slate-300 hover:text-white transition-all group flex items-center justify-between"
+                      className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 hover:border-cyan-500/40 text-xs text-slate-300 hover:text-white transition-all group flex items-center justify-between"
                     >
                       <span className="truncate pr-2">{prompt}</span>
-                      <Send size={11} className="text-teal-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <Send size={11} className="text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -349,9 +349,9 @@ export const FloatingAssistant: React.FC = () => {
               <div className="flex gap-2.5 mr-auto max-w-[90%]">
                 <AssistantAvatar size={28} className="animate-pulse" />
                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl rounded-tl-none p-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse delay-150" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse delay-300" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse delay-150" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse delay-300" />
                   <span className="text-[11px] text-slate-400 ml-1">Analyzing patent disclosures...</span>
                 </div>
               </div>
@@ -370,13 +370,13 @@ export const FloatingAssistant: React.FC = () => {
               className="hidden"
             />
 
-            <div className="flex items-center gap-2 bg-slate-950 rounded-2xl border border-slate-800 px-3 py-2 focus-within:border-teal-500/50">
+            <div className="flex items-center gap-2 bg-slate-950 rounded-2xl border border-slate-800 px-3 py-2 focus-within:border-cyan-500/50">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingPdf}
                 title="Attach patent PDF"
-                className="text-slate-400 hover:text-teal-400 p-1 rounded-lg hover:bg-slate-900 transition-colors shrink-0"
+                className="text-slate-400 hover:text-cyan-400 p-1 rounded-lg hover:bg-slate-900 transition-colors shrink-0"
               >
                 <Paperclip size={16} />
               </button>
@@ -395,7 +395,7 @@ export const FloatingAssistant: React.FC = () => {
                 type="button"
                 onClick={() => handleSendMessage()}
                 disabled={!inputMessage.trim() || loading}
-                className="p-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shrink-0"
+                className="p-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-cyan-500/20 shrink-0"
               >
                 <Send size={13} />
               </button>

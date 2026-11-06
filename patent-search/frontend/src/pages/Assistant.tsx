@@ -56,7 +56,7 @@ const WELCOME_CARDS: SuggestionCard[] = [
     title: 'Find Similar Patents',
     subtitle: 'Prior-art overlap & citations',
     query: 'What are the most relevant existing patents and prior-art references related to this invention?',
-    icon: <Sparkles className="w-5 h-5 text-teal-400" />,
+    icon: <Sparkles className="w-5 h-5 text-cyan-400" />,
   },
   {
     title: 'Understand Patent Terminology',
@@ -727,7 +727,7 @@ export const Assistant: React.FC = () => {
             <div className="flex-1 flex flex-col items-center justify-center max-w-[900px] w-full py-8 my-auto z-10">
               {/* Center Robot Avatar with Radial Glow */}
               <div className="mb-4 relative">
-                <div className="absolute inset-0 bg-teal-400/20 blur-xl rounded-full" />
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/25 via-blue-500/20 to-violet-500/25 blur-xl rounded-full" />
                 <div className="relative">
                   <AssistantAvatar size={68} animate={true} />
                 </div>
@@ -853,11 +853,11 @@ export const Assistant: React.FC = () => {
                       {/* Grounded Source Tag */}
                       {!isUser && msg.sources && msg.sources.length > 0 && (
                         <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                          <span className="font-semibold text-teal-400">Grounded Sources:</span>
+                          <span className="font-semibold text-cyan-400">Grounded Sources:</span>
                           {msg.sources.map((src, sIdx) => (
                             <span
                               key={sIdx}
-                              className="px-2.5 py-0.5 rounded-md bg-slate-950/80 border border-slate-800 text-teal-300 font-mono text-[11px]"
+                              className="px-2.5 py-0.5 rounded-md bg-slate-950/80 border border-slate-800 text-cyan-300 font-mono text-[11px]"
                             >
                               {src}
                             </span>

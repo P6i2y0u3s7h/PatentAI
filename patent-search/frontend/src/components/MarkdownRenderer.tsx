@@ -27,7 +27,7 @@ function renderInlineText(text: string): React.ReactNode[] {
       return (
         <code
           key={index}
-          className="px-1.5 py-0.5 mx-0.5 rounded-md bg-slate-800/90 border border-slate-700/60 text-teal-300 font-mono text-[11px] sm:text-xs"
+          className="px-1.5 py-0.5 mx-0.5 rounded-md bg-slate-800/90 border border-slate-700/60 text-cyan-300 font-mono text-[11px] sm:text-xs"
         >
           {part.slice(1, -1)}
         </code>
@@ -77,7 +77,7 @@ function renderInlineText(text: string): React.ReactNode[] {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-teal-400 hover:text-teal-300 underline underline-offset-2 transition-colors font-medium"
+          className="inline-flex items-center gap-0.5 text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors font-medium"
         >
           <span>{label}</span>
           <ExternalLink size={11} className="inline opacity-70" />
@@ -104,7 +104,7 @@ const CodeBlock: React.FC<{ language: string; code: string }> = ({ language, cod
   return (
     <div className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-950/90 shadow-lg">
       <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-400 font-mono">
-        <span className="uppercase tracking-wider font-semibold text-teal-400">{language || 'code'}</span>
+        <span className="uppercase tracking-wider font-semibold text-cyan-400">{language || 'code'}</span>
         <button
           type="button"
           onClick={handleCopy}
@@ -124,7 +124,7 @@ const CodeBlock: React.FC<{ language: string; code: string }> = ({ language, cod
           )}
         </button>
       </div>
-      <pre className="p-3.5 overflow-x-auto text-xs font-mono text-slate-200 leading-relaxed selection:bg-teal-500/30">
+      <pre className="p-3.5 overflow-x-auto text-xs font-mono text-slate-200 leading-relaxed selection:bg-cyan-500/30">
         <code>{code}</code>
       </pre>
     </div>
@@ -142,7 +142,7 @@ const MarkdownTable: React.FC<{ rows: string[][] }> = ({ rows }) => {
   return (
     <div className="my-3.5 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60 shadow-md">
       <table className="w-full text-xs text-left border-collapse">
-        <thead className="bg-slate-900/95 border-b border-slate-700/80 text-teal-300 font-semibold uppercase tracking-wider text-[11px]">
+        <thead className="bg-slate-900/95 border-b border-slate-700/80 text-cyan-300 font-semibold uppercase tracking-wider text-[11px]">
           <tr>
             {header.map((col, cIdx) => (
               <th key={cIdx} className="px-3.5 py-2.5 font-medium">
@@ -236,13 +236,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           );
         } else if (level === 2) {
           elements.push(
-            <h2 key={elementKey++} className="text-base sm:text-lg font-bold font-heading text-teal-300 mt-3.5 mb-2 pb-1 border-b border-slate-800 tracking-tight">
+            <h2 key={elementKey++} className="text-base sm:text-lg font-bold font-heading text-cyan-300 mt-3.5 mb-2 pb-1 border-b border-slate-800 tracking-tight">
               {renderInlineText(text)}
             </h2>
           );
         } else if (level === 3) {
           elements.push(
-            <h3 key={elementKey++} className="text-sm font-semibold font-heading text-teal-400 mt-3 mb-1.5">
+            <h3 key={elementKey++} className="text-sm font-semibold font-heading text-cyan-400 mt-3 mb-1.5">
               {renderInlineText(text)}
             </h3>
           );
@@ -275,7 +275,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
       elements.push(
         <blockquote
           key={elementKey++}
-          className="border-l-4 border-teal-500/80 pl-3.5 py-1.5 my-2.5 bg-teal-500/5 text-slate-300 italic rounded-r-lg text-xs sm:text-sm leading-relaxed"
+          className="border-l-4 border-cyan-500/80 pl-3.5 py-1.5 my-2.5 bg-cyan-500/5 text-slate-300 italic rounded-r-lg text-xs sm:text-sm leading-relaxed"
         >
           {quoteLines.map((qLine, qIdx) => (
             <p key={qIdx} className="my-0.5">
@@ -307,11 +307,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           {listItems.map((item, lIdx) => (
             <li key={lIdx} className="flex items-start gap-2.5 leading-relaxed text-slate-300">
               {item.isNumbered ? (
-                <span className="font-mono text-teal-400 font-bold text-xs shrink-0 mt-0.5 w-4 text-right">
+                <span className="font-mono text-cyan-400 font-bold text-xs shrink-0 mt-0.5 w-4 text-right">
                   {item.num}.
                 </span>
               ) : (
-                <span className="text-teal-400 text-sm shrink-0 leading-none mt-1">•</span>
+                <span className="text-cyan-400 text-sm shrink-0 leading-none mt-1">•</span>
               )}
               <div className="flex-1 min-w-0">{renderInlineText(item.text)}</div>
             </li>

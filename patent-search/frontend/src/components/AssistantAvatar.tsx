@@ -26,31 +26,31 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full rounded-full transition-all duration-300"
         style={{
-          filter: 'drop-shadow(0 0 7px rgba(45, 212, 191, 0.45))',
+          filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.65)) drop-shadow(0 0 16px rgba(139, 92, 246, 0.4))',
         }}
       >
         <defs>
-          {/* Subtle gradient for inner turquoise background */}
-          <linearGradient id="robotTurquoiseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#2dd4bf" />
-            <stop offset="60%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#0d9488" />
+          {/* Neural Particle Intelligence Theme Gradient: Cyan -> Electric Blue -> Violet */}
+          <linearGradient id="robotThemeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="50%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#8b5cf6" />
           </linearGradient>
 
-          {/* Neon outer ring gradient */}
+          {/* Radiant Neon Outer Ring Gradient: Vivid Cyan -> Electric Blue -> Magenta */}
           <linearGradient id="robotRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#5eead4" />
-            <stop offset="50%" stopColor="#2dd4bf" />
-            <stop offset="100%" stopColor="#06b6d4" />
+            <stop offset="0%" stopColor="#22d3ee" />
+            <stop offset="45%" stopColor="#60a5fa" />
+            <stop offset="100%" stopColor="#d946ef" />
           </linearGradient>
         </defs>
 
-        {/* Outer Circular Turquoise Background */}
+        {/* Outer Circular Themed Background */}
         <circle
           cx="50"
           cy="50"
           r="46"
-          fill="url(#robotTurquoiseGrad)"
+          fill="url(#robotThemeGrad)"
           stroke="url(#robotRingGrad)"
           strokeWidth="3.5"
         />
@@ -120,7 +120,7 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
             width="35"
             height="29"
             rx="9"
-            fill="url(#robotTurquoiseGrad)"
+            fill="url(#robotThemeGrad)"
             stroke="#000000"
             strokeWidth="3.2"
           />
@@ -129,9 +129,9 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
           <circle cx="43" cy="48.5" r="4.2" fill="#000000" />
           <circle cx="57" cy="48.5" r="4.2" fill="#000000" />
 
-          {/* Cheeks (Subtle Dark Teal/Rosy Spots) */}
-          <circle cx="39" cy="53" r="2.8" fill="#042f2e" opacity="0.25" />
-          <circle cx="61" cy="53" r="2.8" fill="#042f2e" opacity="0.25" />
+          {/* Cheeks (Subtle Soft Rosy/Indigo Spots) */}
+          <circle cx="39" cy="53" r="2.8" fill="#1e1b4b" opacity="0.3" />
+          <circle cx="61" cy="53" r="2.8" fill="#1e1b4b" opacity="0.3" />
 
           {/* Mouth (Cute Curved Smile) */}
           <path
