@@ -80,7 +80,10 @@ try:
     import numpy as np
     from sentence_transformers import SentenceTransformer
     t0 = time.time()
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    try:
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", local_files_only=True)
+    except Exception:
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     load_time = time.time() - t0
     test_text = "A method for detecting plant diseases using convolutional neural networks and image recognition"
     emb = model.encode(test_text, normalize_embeddings=True, convert_to_numpy=True).astype("float32")

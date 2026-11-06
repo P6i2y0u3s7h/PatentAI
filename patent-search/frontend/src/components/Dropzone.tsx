@@ -34,14 +34,14 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
   if (selectedFile) {
     return (
-      <div className="flex items-center justify-between p-4 rounded-xl glass-card border border-blue-500/40 bg-blue-950/20">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center border border-blue-500/30 flex-shrink-0">
-            <FileText className="w-5 h-5 text-blue-400" />
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-[#05070D]/90 border border-cyan-500/30 shadow-[0_0_20px_-5px_rgba(6,182,212,0.2)]">
+        <div className="flex items-center gap-3.5 overflow-hidden">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center border border-cyan-500/30 flex-shrink-0 text-cyan-400">
+            <FileText className="w-5 h-5" />
           </div>
           <div className="overflow-hidden text-left">
             <p className="text-sm font-medium text-slate-100 truncate">{selectedFile.name}</p>
-            <p className="text-xs text-slate-400 font-mono">
+            <p className="text-xs text-cyan-400/80 font-mono">
               {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • PDF Document
             </p>
           </div>
@@ -61,15 +61,15 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+      className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-300 ${
         isDragActive
-          ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
-          : 'border-slate-700/80 hover:border-slate-500 bg-slate-900/30 hover:bg-slate-900/50'
+          ? 'border-cyan-400 bg-cyan-500/10 scale-[1.01] shadow-[0_0_25px_-5px_rgba(6,182,212,0.3)]'
+          : 'border-white/[0.12] hover:border-cyan-500/40 bg-[#05070D]/60 hover:bg-[#05070D]/90'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center border border-slate-700 text-blue-400">
+        <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/25 text-cyan-400 shadow-sm">
           <UploadCloud size={24} />
         </div>
         <div>

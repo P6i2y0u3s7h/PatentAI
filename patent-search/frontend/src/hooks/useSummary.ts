@@ -17,9 +17,11 @@ export const useSummarizePdf = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      // DO NOT set Content-Type manually — axios automatically sets
-      // 'multipart/form-data; boundary=...' when FormData is passed.
-      const response = await apiClient.post<SummaryResponse>('/summary/pdf', formData);
+      const response = await apiClient.post<SummaryResponse>('/summary/pdf', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     },
   });

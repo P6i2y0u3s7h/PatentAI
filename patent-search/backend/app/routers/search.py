@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
-from app.dependencies import get_current_user, get_optional_user
+from app.dependencies import get_current_user
 from app.models import SearchRequest, SearchResponse
 from app.services import embedding_service, firestore_service, pdf_service, search_service
 from app.utils import clean_text
@@ -20,10 +20,11 @@ router = APIRouter(prefix="/search", tags=["Search"])
 @router.post("/", response_model=SearchResponse, summary="Search Patents by Text")
 async def search_by_text(
     body: SearchRequest,
-    user: Annotated[dict | None, Depends(get_optional_user)] = None,
+    user: Annotated[dict, Depends(get_current_user)],
 ) -> SearchResponse:
     """
     Perform semantic patent prior-art search using a text query.
+    Requires a valid Firebase ID token in the Authorization header.
     Returns top-K similar patents ranked by cosine similarity.
     """
     start_ms = time.perf_counter() * 1000
@@ -35,7 +36,7 @@ async def search_by_text(
             detail="Query text is too short after cleaning. Please provide more detail.",
         )
 
-    logger.info("[SEARCH] text query: %d chars, top_k=%d", len(cleaned_query), body.top_k)
+    logger.info("[SEARCH] text query: %d chars, top_k=%d, uid='%s'", len(cleaned_query), body.top_k, user.get("uid"))
 
     embedding = embedding_service.get_embedding(cleaned_query)
     logger.info("[EMBEDDING] shape=%s, norm=%.4f", embedding.shape, float((embedding ** 2).sum() ** 0.5))
@@ -45,23 +46,20 @@ async def search_by_text(
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
-    # Persist to Firestore if user is authenticated
-    if user:
-        logger.info("[HISTORY] User authenticated (uid='%s'). Saving search history...", user.get("uid"))
-        try:
-            top = results[0] if results else None
-            firestore_service.save_search_history(
-                user_id=user["uid"],
-                query_snippet=cleaned_query[:500],
-                top_result_title=top.title if top else None,
-                top_result_score=top.similarity_score if top else None,
-                result_count=len(results),
-                source="text",
-            )
-        except Exception as exc:
-            logger.warning("[HISTORY] Failed to save search history (non-fatal): %s", exc)
-    else:
-        logger.info("[HISTORY] Request unauthenticated — search history will not be saved.")
+    # Always persist to Firestore — user is guaranteed authenticated
+    logger.info("[HISTORY] Saving search history for uid='%s'...", user.get("uid"))
+    try:
+        top = results[0] if results else None
+        firestore_service.save_search_history(
+            user_id=user["uid"],
+            query_snippet=cleaned_query[:500],
+            top_result_title=top.title if top else None,
+            top_result_score=top.similarity_score if top else None,
+            result_count=len(results),
+            source="text",
+        )
+    except Exception as exc:
+        logger.warning("[HISTORY] Failed to save search history (non-fatal): %s", exc)
 
     return SearchResponse(
         results=results,
@@ -75,10 +73,11 @@ async def search_by_text(
 async def search_by_pdf(
     file: UploadFile = File(..., description="PDF file to search with"),
     top_k: int = Form(default=10, ge=1, le=50),
-    user: Annotated[dict | None, Depends(get_optional_user)] = None,
+    user: Annotated[dict, Depends(get_current_user)] = None,
 ) -> SearchResponse:
     """
     Extract text from an uploaded PDF and perform semantic patent search.
+    Requires a valid Firebase ID token in the Authorization header.
 
     The request MUST use multipart/form-data with:
       - file: the PDF binary
@@ -87,10 +86,11 @@ async def search_by_pdf(
     start_ms = time.perf_counter() * 1000
 
     logger.info(
-        "[PDF] received: filename='%s', content_type='%s', top_k=%d",
+        "[PDF] received: filename='%s', content_type='%s', top_k=%d, uid='%s'",
         file.filename or "unknown",
         file.content_type or "unknown",
         top_k,
+        user.get("uid"),
     )
 
     file_bytes = await file.read()
@@ -116,22 +116,20 @@ async def search_by_pdf(
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
-    if user:
-        logger.info("[HISTORY] User authenticated (uid='%s'). Saving PDF search history...", user.get("uid"))
-        try:
-            top = results[0] if results else None
-            firestore_service.save_search_history(
-                user_id=user["uid"],
-                query_snippet=cleaned_query[:500],
-                top_result_title=top.title if top else None,
-                top_result_score=top.similarity_score if top else None,
-                result_count=len(results),
-                source="pdf",
-            )
-        except Exception as exc:
-            logger.warning("[HISTORY] Failed to save PDF search history (non-fatal): %s", exc)
-    else:
-        logger.info("[HISTORY] Request unauthenticated — PDF search history will not be saved.")
+    # Always persist to Firestore — user is guaranteed authenticated
+    logger.info("[HISTORY] Saving PDF search history for uid='%s'...", user.get("uid"))
+    try:
+        top = results[0] if results else None
+        firestore_service.save_search_history(
+            user_id=user["uid"],
+            query_snippet=cleaned_query[:500],
+            top_result_title=top.title if top else None,
+            top_result_score=top.similarity_score if top else None,
+            result_count=len(results),
+            source="pdf",
+        )
+    except Exception as exc:
+        logger.warning("[HISTORY] Failed to save PDF search history (non-fatal): %s", exc)
 
     return SearchResponse(
         results=results,

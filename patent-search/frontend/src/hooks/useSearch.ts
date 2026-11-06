@@ -24,10 +24,11 @@ export const useSearchPdf = () => {
       formData.append('file', file);
       formData.append('top_k', top_k.toString());
 
-      // DO NOT set Content-Type manually — axios automatically sets
-      // 'multipart/form-data; boundary=...' when FormData is passed.
-      // Manually overriding Content-Type would drop the boundary and break parsing.
-      const response = await apiClient.post<SearchResponse>('/search/pdf', formData);
+      const response = await apiClient.post<SearchResponse>('/search/pdf', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     },
     onSuccess: () => {

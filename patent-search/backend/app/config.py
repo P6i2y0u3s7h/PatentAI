@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     MAX_SUMMARY_LENGTH: int = 512
     MIN_SUMMARY_LENGTH: int = 64
 
+    # ── LLM & External AI ────────────────────────────────────────────────────
+    GROQ_API_KEY: str = ""
+    GROK_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    AI_MODEL_NAME: str = "gemini-1.5-flash"
+
     # ── Firebase ──────────────────────────────────────────────────────────────
     FIREBASE_CREDENTIALS_PATH: str = "firebase-service-account.json"
     FIREBASE_PROJECT_ID: str = ""

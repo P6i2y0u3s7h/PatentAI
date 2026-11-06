@@ -29,12 +29,21 @@ def load_summarization_model() -> None:
         try:
             from transformers import pipeline as hf_pipeline
 
-            _pipeline = hf_pipeline(
-                "summarization",
-                model=settings.SUMMARIZATION_MODEL,
-                tokenizer=settings.SUMMARIZATION_MODEL,
-                device=-1,  # CPU; set to 0 for GPU
-            )
+            try:
+                _pipeline = hf_pipeline(
+                    "summarization",
+                    model=settings.SUMMARIZATION_MODEL,
+                    tokenizer=settings.SUMMARIZATION_MODEL,
+                    device=-1,  # CPU; set to 0 for GPU
+                    model_kwargs={"local_files_only": True},
+                )
+            except Exception:
+                _pipeline = hf_pipeline(
+                    "summarization",
+                    model=settings.SUMMARIZATION_MODEL,
+                    tokenizer=settings.SUMMARIZATION_MODEL,
+                    device=-1,
+                )
             _model_loaded = True
             logger.info("Summarization model loaded successfully.")
         except Exception as exc:
@@ -55,6 +64,13 @@ def summarize(text: str) -> str:
     """
     settings = get_settings()
     cleaned = clean_text(text)
+    if not cleaned:
+        return ""
+
+    word_count = len(cleaned.split())
+    # If the text is already very brief (<= 15 words), return it directly
+    if word_count <= 15:
+        return cleaned
 
     if not _model_loaded or _pipeline is None:
         logger.info("Using extractive summary fallback.")
@@ -62,10 +78,14 @@ def summarize(text: str) -> str:
 
     try:
         truncated = truncate_text(cleaned, max_tokens=settings.MAX_SUMMARY_INPUT_TOKENS)
+        # Adaptively scale min_length and max_length for shorter inputs
+        dynamic_min = min(settings.MIN_SUMMARY_LENGTH, max(10, word_count // 3))
+        dynamic_max = max(dynamic_min + 15, min(settings.MAX_SUMMARY_LENGTH, word_count))
+
         result = _pipeline(
             truncated,
-            max_length=settings.MAX_SUMMARY_LENGTH,
-            min_length=settings.MIN_SUMMARY_LENGTH,
+            max_length=dynamic_max,
+            min_length=dynamic_min,
             do_sample=False,
             num_beams=4,
             early_stopping=True,

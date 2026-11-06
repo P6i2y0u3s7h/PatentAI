@@ -39,6 +39,13 @@ apiClient.interceptors.request.use(
     } catch (error) {
       console.error('[PatentAI] Error fetching auth token:', error);
     }
+
+    // Automatically remove default application/json header when sending FormData
+    // so the browser sets multipart/form-data with the correct boundary parameter
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -47,23 +54,33 @@ apiClient.interceptors.request.use(
 // Response interceptor: preserve structured error info from backend
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: string; message?: string; detail?: string }>) => {
+  (error: AxiosError<{ error?: string; message?: string; detail?: string | any[] }>) => {
     const status = error.response?.status ?? 0;
     const data = error.response?.data;
 
     // Extract the most descriptive message available
+    let detailMsg: string | null = null;
+    if (typeof data?.detail === 'string') {
+      detailMsg = data.detail;
+    } else if (Array.isArray(data?.detail) && data.detail.length > 0) {
+      detailMsg = (data.detail as any[])
+        .map((d: any) => d.msg || d.message || (typeof d === 'string' ? d : ''))
+        .filter(Boolean)
+        .join('; ');
+    }
+
     const message =
       data?.message ||
       data?.error ||
-      (typeof data?.detail === 'string' ? data.detail : null) ||
-      error.message ||
+      detailMsg ||
+      (status === 422 ? 'Please check your input text and try again.' : error.message) ||
       'An unexpected error occurred';
 
     // Provide user-friendly messages for known HTTP status codes
     const friendlyMessages: Record<number, string> = {
       400: 'Invalid request. Please check your input.',
-      401: 'Your session has expired. Please log in again.',
-      403: 'You do not have permission to perform this action.',
+      401: 'Please login to continue.',
+      403: 'You are not authorized to perform this action.',
       413: 'The uploaded file is too large. Maximum size is 20 MB.',
       415: 'Only PDF files are supported. Please upload a valid PDF.',
       422: message, // Use backend message (extraction failed, short query, etc.)

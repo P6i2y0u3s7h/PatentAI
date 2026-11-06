@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { HeroWordReveal } from '../components/AnimatedText';
 import { useAuth } from '../hooks/useAuth';
-import { Cpu, LogIn, AlertCircle } from 'lucide-react';
+import { Cpu, LogIn, AlertCircle, Sparkles } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -28,14 +30,37 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-panel rounded-3xl p-8 border border-slate-800 shadow-2xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mx-auto text-blue-400">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-md w-full glass-panel rounded-3xl p-8 border border-slate-800 shadow-[0_0_50px_-15px_rgba(6,182,212,0.15)] space-y-6 relative overflow-hidden"
+      >
+        <div className="text-center space-y-3">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="w-12 h-12 rounded-2xl bg-[#0B1020] border border-cyan-500/40 flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_20px_-3px_rgba(6,182,212,0.4)]"
+          >
             <Cpu size={24} />
-          </div>
-          <h2 className="text-2xl font-bold font-heading text-slate-100">Welcome Back</h2>
-          <p className="text-xs text-slate-400">Sign in to your PatentAI account to access search history</p>
+          </motion.div>
+
+          <HeroWordReveal
+            prefixText="Welcome"
+            gradientText="Back"
+            className="text-2xl font-bold font-heading text-slate-100 tracking-tight"
+          />
+
+          <motion.p
+            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-xs text-slate-400"
+          >
+            Sign in to your PatentAI account to access search history & analytics
+          </motion.p>
         </div>
 
         {error && (
@@ -84,7 +109,7 @@ export const Login: React.FC = () => {
             Register here
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

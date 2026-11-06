@@ -29,7 +29,11 @@ def load_embedding_model() -> None:
             return
         logger.info("Loading embedding model: %s", settings.EMBEDDING_MODEL)
         try:
-            _model = SentenceTransformer(settings.EMBEDDING_MODEL)
+            # Try loading cached local model first to avoid HuggingFace network retry delays
+            try:
+                _model = SentenceTransformer(settings.EMBEDDING_MODEL, local_files_only=True)
+            except Exception:
+                _model = SentenceTransformer(settings.EMBEDDING_MODEL)
             _model_loaded = True
             logger.info("Embedding model loaded successfully.")
         except Exception as exc:
@@ -54,7 +58,9 @@ def get_embedding(text: str) -> np.ndarray:
     if not _model_loaded or _model is None:
         raise ModelNotLoadedError("embedding")
 
-    embedding = _model.encode(text, normalize_embeddings=True, convert_to_numpy=True)
+    # Bound to model's effective context (256 tokens ~ 1500 chars) for high-speed inference
+    truncated = text[:3000] if len(text) > 3000 else text
+    embedding = _model.encode(truncated, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False)
     return embedding.astype(np.float32)
 
 
@@ -68,8 +74,9 @@ def get_embeddings_batch(texts: list[str]) -> np.ndarray:
     if not _model_loaded or _model is None:
         raise ModelNotLoadedError("embedding")
 
+    bounded_texts = [t[:3000] for t in texts]
     embeddings = _model.encode(
-        texts,
+        bounded_texts,
         normalize_embeddings=True,
         convert_to_numpy=True,
         show_progress_bar=False,

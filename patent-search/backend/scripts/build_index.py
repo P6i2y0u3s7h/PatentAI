@@ -68,7 +68,10 @@ def build_index() -> None:
 
     # ── Load model ────────────────────────────────────────────────────────────
     logger.info("Loading embedding model: %s", EMBEDDING_MODEL)
-    model = SentenceTransformer(EMBEDDING_MODEL)
+    try:
+        model = SentenceTransformer(EMBEDDING_MODEL, local_files_only=True)
+    except Exception:
+        model = SentenceTransformer(EMBEDDING_MODEL)
 
     # ── Generate embeddings in batches ────────────────────────────────────────
     logger.info("Generating embeddings for %d patents …", len(corpus))

@@ -15,7 +15,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import InMemoryRateLimiter, RequestTimingMiddleware, SecurityHeadersMiddleware
 from app.firebase_admin_init import initialize_firebase
-from app.routers import auth, health, search, summary
+from app.routers import assistant, auth, health, patents, search, summary
 from app.services.embedding_service import load_embedding_model
 from app.services.search_service import load_index
 from app.services.summary_service import load_summarization_model
@@ -95,6 +95,8 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(search.router)
     app.include_router(summary.router)
+    app.include_router(assistant.router)
+    app.include_router(patents.router)
 
     @app.get("/", include_in_schema=False)
     async def root():
