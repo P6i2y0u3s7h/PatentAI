@@ -6,7 +6,8 @@ import logging
 import time
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from starlette.concurrency import run_in_threadpool
 
 from app.dependencies import get_current_user
 from app.models import SearchRequest, SearchResponse
@@ -17,9 +18,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
+def _async_save_history(
+    user_id: str,
+    query_snippet: str,
+    top_result_title: str | None,
+    top_result_score: float | None,
+    result_count: int,
+    source: str,
+) -> None:
+    """Non-blocking background task to persist search history without delaying HTTP response."""
+    try:
+        firestore_service.save_search_history(
+            user_id=user_id,
+            query_snippet=query_snippet,
+            top_result_title=top_result_title,
+            top_result_score=top_result_score,
+            result_count=result_count,
+            source=source,
+        )
+    except Exception as exc:
+        logger.warning("[HISTORY] Background history save skipped or failed (non-fatal): %s", exc)
+
+
 @router.post("/", response_model=SearchResponse, summary="Search Patents by Text")
 async def search_by_text(
     body: SearchRequest,
+    background_tasks: BackgroundTasks,
     user: Annotated[dict, Depends(get_current_user)],
 ) -> SearchResponse:
     """
@@ -38,28 +62,24 @@ async def search_by_text(
 
     logger.info("[SEARCH] text query: %d chars, top_k=%d, uid='%s'", len(cleaned_query), body.top_k, user.get("uid"))
 
-    embedding = embedding_service.get_embedding(cleaned_query)
-    logger.info("[EMBEDDING] shape=%s, norm=%.4f", embedding.shape, float((embedding ** 2).sum() ** 0.5))
-
-    results = search_service.search(embedding, body.top_k, cleaned_query)
+    # Offload CPU-bound embedding and vector search to worker threads
+    embedding = await run_in_threadpool(embedding_service.get_embedding, cleaned_query)
+    results = await run_in_threadpool(search_service.search, embedding, body.top_k, cleaned_query)
     logger.info("[FAISS] returned %d results", len(results))
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
-    # Always persist to Firestore — user is guaranteed authenticated
-    logger.info("[HISTORY] Saving search history for uid='%s'...", user.get("uid"))
-    try:
-        top = results[0] if results else None
-        firestore_service.save_search_history(
-            user_id=user["uid"],
-            query_snippet=cleaned_query[:500],
-            top_result_title=top.title if top else None,
-            top_result_score=top.similarity_score if top else None,
-            result_count=len(results),
-            source="text",
-        )
-    except Exception as exc:
-        logger.warning("[HISTORY] Failed to save search history (non-fatal): %s", exc)
+    # Persist to Firestore asynchronously in background so response is dispatched immediately
+    top = results[0] if results else None
+    background_tasks.add_task(
+        _async_save_history,
+        user_id=user["uid"],
+        query_snippet=cleaned_query[:500],
+        top_result_title=top.title if top else None,
+        top_result_score=top.similarity_score if top else None,
+        result_count=len(results),
+        source="text",
+    )
 
     return SearchResponse(
         results=results,
@@ -71,6 +91,7 @@ async def search_by_text(
 
 @router.post("/pdf", response_model=SearchResponse, summary="Search Patents by PDF Upload")
 async def search_by_pdf(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="PDF file to search with"),
     top_k: int = Form(default=10, ge=1, le=50),
     user: Annotated[dict, Depends(get_current_user)] = None,
@@ -78,10 +99,6 @@ async def search_by_pdf(
     """
     Extract text from an uploaded PDF and perform semantic patent search.
     Requires a valid Firebase ID token in the Authorization header.
-
-    The request MUST use multipart/form-data with:
-      - file: the PDF binary
-      - top_k: (optional) number of results, default 10
     """
     start_ms = time.perf_counter() * 1000
 
@@ -90,37 +107,24 @@ async def search_by_pdf(
         file.filename or "unknown",
         file.content_type or "unknown",
         top_k,
-        user.get("uid"),
+        user.get("uid") if user else "anonymous",
     )
 
     file_bytes = await file.read()
-    logger.info("[PDF] size=%.2f KB (%d bytes)", len(file_bytes) / 1024, len(file_bytes))
-
-    extracted_text = pdf_service.extract_text_from_pdf(file_bytes, file.filename or "")
+    extracted_text = await run_in_threadpool(pdf_service.extract_text_from_pdf, file_bytes, file.filename or "")
     cleaned_query = clean_text(extracted_text)
 
-    logger.info(
-        "[PDF] extracted=%d chars, cleaned=%d chars, words=%d",
-        len(extracted_text),
-        len(cleaned_query),
-        len(cleaned_query.split()),
-    )
-
-    embedding = embedding_service.get_embedding(cleaned_query)
-    logger.info("[EMBEDDING] shape=%s, norm=%.4f", embedding.shape, float((embedding ** 2).sum() ** 0.5))
-
-    results = search_service.search(embedding, top_k, cleaned_query)
+    embedding = await run_in_threadpool(embedding_service.get_embedding, cleaned_query)
+    results = await run_in_threadpool(search_service.search, embedding, top_k, cleaned_query)
     logger.info("[FAISS] PDF search returned %d results", len(results))
-    if results:
-        logger.info("[FAISS] top result: '%s' (score=%.4f)", results[0].title, results[0].similarity_score)
 
     elapsed_ms = (time.perf_counter() * 1000) - start_ms
 
-    # Always persist to Firestore — user is guaranteed authenticated
-    logger.info("[HISTORY] Saving PDF search history for uid='%s'...", user.get("uid"))
-    try:
+    # Persist to Firestore asynchronously in background
+    if user and user.get("uid"):
         top = results[0] if results else None
-        firestore_service.save_search_history(
+        background_tasks.add_task(
+            _async_save_history,
             user_id=user["uid"],
             query_snippet=cleaned_query[:500],
             top_result_title=top.title if top else None,
@@ -128,8 +132,6 @@ async def search_by_pdf(
             result_count=len(results),
             source="pdf",
         )
-    except Exception as exc:
-        logger.warning("[HISTORY] Failed to save PDF search history (non-fatal): %s", exc)
 
     return SearchResponse(
         results=results,

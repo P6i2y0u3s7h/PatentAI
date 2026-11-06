@@ -12,7 +12,7 @@ import { useSearchText, useSearchPdf } from '../hooks/useSearch';
 import { useSummarizeText, useSummarizePdf } from '../hooks/useSummary';
 import { useAuth } from '../hooks/useAuth';
 import { PatentResult, SummaryResponse } from '../types/patent';
-import { ApiError } from '../api/api';
+import { apiClient, ApiError } from '../api/api';
 import {
   Sparkles,
   Shield,
@@ -142,6 +142,13 @@ export const Home: React.FC = () => {
 
   const isLoadingSearch = searchTextMutation.isPending || searchPdfMutation.isPending;
   const isLoadingSummary = summarizeTextMutation.isPending || summarizePdfMutation.isPending;
+
+  // Silent warm-up ping for deployed cloud backends (prevents/reduces cold-start latency)
+  React.useEffect(() => {
+    apiClient.get('/health').catch(() => {
+      // Non-fatal warm-up ping
+    });
+  }, []);
 
   const scrollToSearch = () => {
     const el = document.getElementById('search-panel');

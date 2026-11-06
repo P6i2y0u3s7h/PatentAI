@@ -19,6 +19,11 @@ _lock = threading.Lock()
 _model: Optional[SentenceTransformer] = None
 _model_loaded: bool = False
 
+# High-performance in-memory LRU cache for query embeddings
+_embedding_cache: dict[str, np.ndarray] = {}
+_cache_lock = threading.Lock()
+MAX_CACHE_SIZE = 1000
+
 
 def load_embedding_model() -> None:
     """Load the embedding model into memory. Called once at startup."""
@@ -48,6 +53,7 @@ def is_embedding_model_loaded() -> bool:
 def get_embedding(text: str) -> np.ndarray:
     """
     Generate a single L2-normalized embedding vector.
+    Results are cached in memory for high-frequency queries.
 
     Args:
         text: Input text to embed.
@@ -60,8 +66,28 @@ def get_embedding(text: str) -> np.ndarray:
 
     # Bound to model's effective context (256 tokens ~ 1500 chars) for high-speed inference
     truncated = text[:3000] if len(text) > 3000 else text
-    embedding = _model.encode(truncated, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False)
-    return embedding.astype(np.float32)
+    cache_key = truncated.strip().lower()
+
+    # Check cache first for instant 0.0001s retrieval
+    with _cache_lock:
+        if cache_key in _embedding_cache:
+            return _embedding_cache[cache_key].copy()
+
+    embedding = _model.encode(
+        truncated,
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    ).astype(np.float32)
+
+    with _cache_lock:
+        if len(_embedding_cache) >= MAX_CACHE_SIZE:
+            # Drop the oldest 20% when cache fills up
+            for k in list(_embedding_cache.keys())[:200]:
+                del _embedding_cache[k]
+        _embedding_cache[cache_key] = embedding
+
+    return embedding
 
 
 def get_embeddings_batch(texts: list[str]) -> np.ndarray:

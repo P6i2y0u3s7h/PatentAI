@@ -37,15 +37,15 @@ def load_summarization_model() -> None:
                     device=-1,  # CPU; set to 0 for GPU
                     model_kwargs={"local_files_only": True},
                 )
-            except Exception:
-                _pipeline = hf_pipeline(
-                    "summarization",
-                    model=settings.SUMMARIZATION_MODEL,
-                    tokenizer=settings.SUMMARIZATION_MODEL,
-                    device=-1,
+                _model_loaded = True
+                logger.info("Local BART summarization model loaded successfully.")
+            except Exception as local_err:
+                logger.info(
+                    "Local BART weights not pre-cached (%s). Skipping 1.6GB download on startup to conserve memory. Fast LLM / extractive summarization engine active.",
+                    local_err,
                 )
-            _model_loaded = True
-            logger.info("Summarization model loaded successfully.")
+                _model_loaded = False
+                return
         except Exception as exc:
             logger.warning("BART summarization model unavailable, fallback enabled: %s", exc)
             _model_loaded = False

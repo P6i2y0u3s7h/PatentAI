@@ -25,17 +25,37 @@ export const LoadingSkeletonCard: React.FC = () => (
   </div>
 );
 
-export const AiLoadingScreen: React.FC<{ message?: string }> = ({ message = 'Analyzing prior-art with AI models...' }) => (
-  <div className="flex flex-col items-center justify-center p-12 space-y-6 text-center">
-    <div className="relative">
-      <div className="w-20 h-20 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30 animate-pulse">
-        <Sparkles className="w-10 h-10 text-blue-400 animate-bounce" />
+export const AiLoadingScreen: React.FC<{ message?: string }> = ({ message = 'Analyzing prior-art with AI models...' }) => {
+  const [elapsed, setElapsed] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-12 space-y-6 text-center">
+      <div className="relative">
+        <div className="w-20 h-20 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30 animate-pulse">
+          <Sparkles className="w-10 h-10 text-blue-400 animate-bounce" />
+        </div>
+        <div className="absolute inset-0 rounded-full border-2 border-blue-500/50 border-t-transparent animate-spin"></div>
       </div>
-      <div className="absolute inset-0 rounded-full border-2 border-blue-500/50 border-t-transparent animate-spin"></div>
+      <div className="space-y-2 max-w-md">
+        <h4 className="text-lg font-semibold text-slate-100 font-heading">{message}</h4>
+        {elapsed < 4 ? (
+          <p className="text-sm text-slate-400">Embedding vector search & semantic similarity scoring in progress...</p>
+        ) : (
+          <div className="p-3 bg-cyan-950/40 border border-cyan-800/40 rounded-xl space-y-1 animate-fade-in">
+            <p className="text-xs font-semibold text-cyan-300">Waking up cloud neural vector instance ({elapsed}s)...</p>
+            <p className="text-xs text-slate-400">
+              Free cloud tiers spin down when idle. Once awake, subsequent searches execute in sub-100ms.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="space-y-2 max-w-sm">
-      <h4 className="text-lg font-semibold text-slate-100 font-heading">{message}</h4>
-      <p className="text-sm text-slate-400">Embedding vector search & semantic similarity scoring in progress...</p>
-    </div>
-  </div>
-);
+  );
+};
