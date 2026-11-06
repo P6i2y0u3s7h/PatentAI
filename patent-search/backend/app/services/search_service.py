@@ -37,16 +37,17 @@ def load_index() -> None:
         index_path = settings.FAISS_INDEX_PATH
         metadata_path = settings.METADATA_PATH
 
-        if not index_path.exists():
+        if not index_path.exists() or not metadata_path.exists():
             logger.warning(
-                "FAISS index not found at '%s'. Run 'python scripts/build_index.py' to create it.",
+                "FAISS index or metadata not found at '%s'. Building index from CSV...",
                 index_path,
             )
-            return
-
-        if not metadata_path.exists():
-            logger.warning("Metadata pickle not found at '%s'.", metadata_path)
-            return
+            try:
+                from scripts.build_index import build_index
+                build_index()
+            except Exception as build_err:
+                logger.error("Auto-building FAISS index failed: %s", build_err)
+                return
 
         try:
             logger.info("Loading FAISS index from %s …", index_path)

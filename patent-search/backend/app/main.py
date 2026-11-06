@@ -47,12 +47,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception as exc:
         logger.error("Embedding model failed to load: %s", exc)
 
-    # Summarization model (non-fatal — optional feature)
-    try:
-        load_summarization_model()
-    except Exception as exc:
-        logger.warning("Summarization model failed to load (non-fatal): %s", exc)
-
     logger.info("═══ PatentAI Backend Ready ═══")
     yield
     logger.info("═══ PatentAI Backend Shutting Down ═══")

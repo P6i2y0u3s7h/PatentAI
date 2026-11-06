@@ -1,5 +1,6 @@
 # PatentAI Backend Dependencies
 # Generated for Python 3.10+
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Web Framework ─────────────────────────────────────────────────────────────
 fastapi==0.115.5

@@ -6,6 +6,8 @@ __pycache__/
 logs/
 *.index
 *.pkl
+!patent-search/backend/data/patents.index
+!patent-search/backend/data/patents_metadata.pkl
 dist/
 *.tsbuildinfo
 venv/
