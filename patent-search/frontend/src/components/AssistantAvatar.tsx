@@ -24,41 +24,81 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full rounded-full transition-all duration-300"
+        className="w-full h-full rounded-full transition-all duration-300 overflow-visible"
         style={{
-          filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.65)) drop-shadow(0 0 16px rgba(139, 92, 246, 0.4))',
+          filter: animate
+            ? 'drop-shadow(0 0 10px rgba(45, 212, 191, 0.75)) drop-shadow(0 0 20px rgba(6, 182, 212, 0.45))'
+            : 'drop-shadow(0 0 6px rgba(45, 212, 191, 0.5))',
         }}
       >
         <defs>
-          {/* Neural Particle Intelligence Theme Gradient: Cyan -> Electric Blue -> Violet */}
-          <linearGradient id="robotThemeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="50%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#8b5cf6" />
+          {/* Authentic Turquoise Gradient from original reference */}
+          <linearGradient id="robotTurquoiseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#2dd4bf" />
+            <stop offset="55%" stopColor="#14b8a6" />
+            <stop offset="100%" stopColor="#0d9488" />
           </linearGradient>
 
-          {/* Radiant Neon Outer Ring Gradient: Vivid Cyan -> Electric Blue -> Magenta */}
+          {/* Neon outer rim gradient */}
           <linearGradient id="robotRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="45%" stopColor="#60a5fa" />
-            <stop offset="100%" stopColor="#d946ef" />
+            <stop offset="0%" stopColor="#5eead4" />
+            <stop offset="50%" stopColor="#2dd4bf" />
+            <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
+
+          {/* Orbital Neon Ring Gradient */}
+          <linearGradient id="robotOrbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#5eead4" stopOpacity="0.95" />
+            <stop offset="45%" stopColor="#22d3ee" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.9" />
+          </linearGradient>
+
+          {/* Internal subtle turquoise ambient pulse */}
+          <radialGradient id="internalTurquoisePulse" cx="50%" cy="38%" r="58%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
+            <stop offset="45%" stopColor="#5eead4" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#0d9488" stopOpacity="0" />
+          </radialGradient>
         </defs>
 
-        {/* Outer Circular Themed Background */}
+        {/* Outer Circular Turquoise Background */}
         <circle
           cx="50"
           cy="50"
           r="46"
-          fill="url(#robotThemeGrad)"
+          fill="url(#robotTurquoiseGrad)"
           stroke="url(#robotRingGrad)"
-          strokeWidth="3.5"
+          strokeWidth="3.2"
         />
 
-        {/* ── Robot Character ── */}
+        {/* Internal Turquoise Light Glow Effect */}
+        <circle
+          cx="50"
+          cy="50"
+          r="44"
+          fill="url(#internalTurquoisePulse)"
+          className={animate ? 'animate-robot-internal-glow' : ''}
+          pointerEvents="none"
+        />
+
+        {/* Thin Rotating Neon Orbital Ring */}
+        {animate && (
+          <circle
+            cx="50"
+            cy="50"
+            r="48.5"
+            fill="none"
+            stroke="url(#robotOrbitGrad)"
+            strokeWidth="1.4"
+            strokeDasharray="22 14 44 14"
+            strokeLinecap="round"
+            className="animate-robot-orbit"
+          />
+        )}
+
+        {/* ── Robot Character Symbol (Strictly Unchanged) ── */}
         <g id="robot-face">
           {/* Top Antenna */}
-          {/* Stem */}
           <line
             x1="50"
             y1="38"
@@ -68,7 +108,6 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
             strokeWidth="3.2"
             strokeLinecap="round"
           />
-          {/* Antenna Ball */}
           <circle cx="50" cy="27" r="3.5" fill="#000000" />
 
           {/* Left Ear Module */}
@@ -120,18 +159,20 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
             width="35"
             height="29"
             rx="9"
-            fill="url(#robotThemeGrad)"
+            fill="url(#robotTurquoiseGrad)"
             stroke="#000000"
             strokeWidth="3.2"
           />
 
-          {/* Eyes (Solid Black Circles) */}
-          <circle cx="43" cy="48.5" r="4.2" fill="#000000" />
-          <circle cx="57" cy="48.5" r="4.2" fill="#000000" />
+          {/* Eyes with Natural Occasional Blinking Animation */}
+          <g className={animate ? 'animate-robot-blink' : ''} style={{ transformOrigin: '50px 48.5px' }}>
+            <circle cx="43" cy="48.5" r="4.2" fill="#000000" />
+            <circle cx="57" cy="48.5" r="4.2" fill="#000000" />
+          </g>
 
-          {/* Cheeks (Subtle Soft Rosy/Indigo Spots) */}
-          <circle cx="39" cy="53" r="2.8" fill="#1e1b4b" opacity="0.3" />
-          <circle cx="61" cy="53" r="2.8" fill="#1e1b4b" opacity="0.3" />
+          {/* Cheeks (Subtle Dark Teal Rosy Spots from reference) */}
+          <circle cx="39" cy="53" r="2.8" fill="#042f2e" opacity="0.25" />
+          <circle cx="61" cy="53" r="2.8" fill="#042f2e" opacity="0.25" />
 
           {/* Mouth (Cute Curved Smile) */}
           <path
@@ -146,4 +187,3 @@ export const AssistantAvatar: React.FC<AssistantAvatarProps> = ({
     </div>
   );
 };
-

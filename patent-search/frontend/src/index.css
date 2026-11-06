@@ -152,9 +152,76 @@ h1, h2, h3, h4, .font-heading {
   filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.28));
 }
 
+/* ── Futuristic AI Robot Assistant Animations ───────────────────────────── */
+
+/* 1. Breathing Turquoise Outer Glow */
+@keyframes breathingTurquoiseGlow {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.95);
+    filter: blur(14px);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.18);
+    filter: blur(22px);
+  }
+}
+.animate-breathing-turquoise {
+  animation: breathingTurquoiseGlow 3.4s ease-in-out infinite;
+}
+
+/* 2. Thin Orbital Neon Ring Rotation */
+@keyframes robotOrbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-robot-orbit {
+  transform-origin: 50px 50px;
+  animation: robotOrbitSpin 12s linear infinite;
+}
+
+/* 3. Natural Occasional Eye Blinking */
+@keyframes robotEyeBlink {
+  0%, 88%, 94%, 100% {
+    transform: scaleY(1);
+  }
+  91%, 92.5% {
+    transform: scaleY(0.12);
+  }
+}
+.animate-robot-blink {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: robotEyeBlink 4.6s ease-in-out infinite;
+}
+
+/* 4. Subtle Internal Turquoise Light Glow */
+@keyframes robotInternalGlow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+}
+.animate-robot-internal-glow {
+  transform-origin: 50px 50px;
+  animation: robotInternalGlow 3.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-neural-gradient {
-    animation: none;
-    background-size: 100% auto;
+  .animate-neural-gradient,
+  .animate-breathing-turquoise,
+  .animate-robot-orbit,
+  .animate-robot-blink,
+  .animate-robot-internal-glow {
+    animation: none !important;
   }
 }

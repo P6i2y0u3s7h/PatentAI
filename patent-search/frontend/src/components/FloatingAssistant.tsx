@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   X,
   Send,
@@ -150,27 +151,38 @@ export const FloatingAssistant: React.FC = () => {
     <>
       {/* ── FLOATING TRIGGER BUTTON (BOTTOM RIGHT) ───────────────────────── */}
       <div className="fixed bottom-6 right-6 z-50">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Open AI Patent Assistant"
-          className="relative group p-1 rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/40 transition-transform duration-300 active:scale-90"
+        <motion.div
+          animate={{ y: [0, -7, 0] }}
+          transition={{
+            duration: 3.6,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="relative inline-block group"
         >
-          {/* Outer Radiant Glowing Halo with Cyan to Violet Neural Theme */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/40 via-blue-500/35 to-violet-500/40 blur-xl group-hover:scale-125 group-hover:from-cyan-400/60 group-hover:to-violet-400/60 transition-all duration-300" />
+          {/* Breathing Turquoise Outer Glow Halo */}
+          <div className="absolute inset-[-6px] rounded-full bg-gradient-to-r from-teal-400/50 via-cyan-400/40 to-teal-400/50 blur-xl animate-breathing-turquoise pointer-events-none group-hover:scale-125 group-hover:opacity-100 transition-all duration-300" />
 
-          {/* Glowing themed robot avatar button with floating animation */}
-          <div className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_36px_rgba(6,182,212,0.9)] group-hover:scale-110 transition-all duration-300 hover:-translate-y-1">
-            <AssistantAvatar size={54} animate={true} />
-          </div>
+          {/* Springy Bounce Trigger Button */}
+          <motion.button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.88, rotate: -2 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+            aria-label="Open AI Patent Assistant"
+            className="relative z-10 block rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-400/50 cursor-pointer shadow-[0_0_26px_rgba(45,212,191,0.65)] hover:shadow-[0_0_42px_rgba(45,212,191,0.95)] transition-shadow duration-300"
+          >
+            <AssistantAvatar size={56} animate={true} />
+          </motion.button>
 
           {/* Tooltip on hover when closed */}
           {!isOpen && (
-            <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#0B1020]/95 border border-cyan-500/30 text-xs text-slate-200 whitespace-nowrap shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 backdrop-blur-xl shadow-cyan-500/10">
-              <span className="font-semibold text-cyan-300">Ask PatentAI</span>
+            <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#0B1020]/95 border border-teal-500/35 text-xs text-slate-200 whitespace-nowrap shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 backdrop-blur-xl shadow-teal-500/10">
+              <span className="font-semibold text-teal-300">Ask PatentAI</span>
             </div>
           )}
-        </button>
+        </motion.div>
       </div>
 
       {/* ── EXPANDABLE FLOATING CHAT WINDOW ───────────────────────────────── */}
