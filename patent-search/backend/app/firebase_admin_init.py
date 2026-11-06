@@ -3,6 +3,8 @@ Firebase Admin SDK initialization.
 Initializes once on first import and reuses the same app instance.
 """
 
+import base64
+import json
 import logging
 import os
 from pathlib import Path
@@ -18,7 +20,7 @@ _firebase_available: bool = False
 
 def initialize_firebase() -> bool:
     """
-    Initialize Firebase Admin SDK from service account file.
+    Initialize Firebase Admin SDK from environment variable, file, or default credentials.
     Returns True if successful, False if credentials are missing (non-fatal).
     """
     global _firebase_app, _firebase_available
@@ -26,27 +28,55 @@ def initialize_firebase() -> bool:
     if _firebase_app is not None:
         return _firebase_available
 
-    cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "firebase-service-account.json")
-    cred_file = Path(cred_path)
+    sa_data: dict | None = None
 
-    if not cred_file.exists():
+    # 1. Try reading from environment variable JSON (standard on cloud platforms like Render/Railway)
+    sa_env = (
+        os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        or os.getenv("FIREBASE_CREDENTIALS_JSON")
+        or os.getenv("FIREBASE_ADMIN_CREDENTIALS")
+    )
+    if sa_env and sa_env.strip():
+        try:
+            sa_data = json.loads(sa_env.strip())
+            logger.info("[FIREBASE] Found service account JSON in environment variable.")
+        except Exception as exc:
+            logger.warning("[FIREBASE] Failed to parse service account JSON from environment: %s", exc)
+
+    # 2. Try reading from base64 environment variable
+    if not sa_data and os.getenv("FIREBASE_SERVICE_ACCOUNT_BASE64"):
+        try:
+            raw_b64 = os.getenv("FIREBASE_SERVICE_ACCOUNT_BASE64", "").strip()
+            decoded = base64.b64decode(raw_b64).decode("utf-8")
+            sa_data = json.loads(decoded)
+            logger.info("[FIREBASE] Found service account JSON in base64 environment variable.")
+        except Exception as exc:
+            logger.warning("[FIREBASE] Failed to parse base64 service account: %s", exc)
+
+    # 3. Try reading from local file path
+    if not sa_data:
+        cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "firebase-service-account.json")
+        cred_file = Path(cred_path)
+        if cred_file.exists():
+            try:
+                sa_data = json.loads(cred_file.read_text(encoding="utf-8"))
+                logger.info("[FIREBASE] Found service account file at '%s'.", cred_path)
+            except Exception as exc:
+                logger.warning("[FIREBASE] Failed to read credentials file '%s': %s", cred_path, exc)
+
+    if not sa_data:
         logger.warning(
-            "[FIREBASE] Service account file NOT FOUND at '%s'. "
-            "History saving and token verification will be DISABLED. "
-            "Searches will still work but will NOT be saved to Firestore.",
-            cred_path,
+            "[FIREBASE] No service account credentials found. "
+            "High-reliability local SQLite history storage and JWT UID extraction active. "
+            "(To enable Cloud Firestore, add FIREBASE_SERVICE_ACCOUNT_JSON in your cloud dashboard)."
         )
         _firebase_available = False
         return False
 
     try:
-        cred = credentials.Certificate(str(cred_file))
+        cred = credentials.Certificate(sa_data)
         _firebase_app = firebase_admin.initialize_app(cred)
         _firebase_available = True
-        project_id = cred_file.read_text()
-        # Extract project_id from file for logging
-        import json
-        sa_data = json.loads(cred_file.read_text())
         logger.info(
             "[FIREBASE] Firebase Admin SDK initialized successfully. "
             "Project: '%s', Service Account: '%s'",
@@ -56,8 +86,8 @@ def initialize_firebase() -> bool:
         return True
     except Exception as exc:
         logger.error(
-            "[FIREBASE] Failed to initialize Firebase Admin SDK: %s. "
-            "History saving will be DISABLED. Searches will still work.",
+            "[FIREBASE] Failed to initialize Firebase Admin SDK with credentials: %s. "
+            "Local history fallback active.",
             exc,
         )
         _firebase_available = False

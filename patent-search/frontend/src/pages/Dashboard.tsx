@@ -102,14 +102,17 @@ export const Dashboard: React.FC = () => {
       </motion.div>
 
       {/* Chart Section */}
-      {chartData.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="glass-panel rounded-3xl p-6 border border-slate-800 space-y-4"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="glass-panel rounded-3xl p-6 border border-slate-800 space-y-4"
+      >
+        <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-100 font-heading">Recent Similarity Scores Trend</h3>
+          <span className="text-xs font-mono text-cyan-400">FAISS Cosine Metric</span>
+        </div>
+        {chartData.length > 0 ? (
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -129,8 +132,16 @@ export const Dashboard: React.FC = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="h-48 w-full flex flex-col items-center justify-center border border-dashed border-slate-800/80 rounded-2xl p-6 text-center space-y-2">
+            <Activity className="w-8 h-8 text-cyan-500/40 animate-pulse" />
+            <p className="text-sm font-medium text-slate-300">No search similarity data recorded yet</p>
+            <p className="text-xs text-slate-500 max-w-sm">
+              Execute a patent search on the home page or upload a patent specification to visualize similarity score curves here.
+            </p>
+          </div>
+        )}
+      </motion.div>
 
       {/* Recent Activity Table */}
       <div className="space-y-4">

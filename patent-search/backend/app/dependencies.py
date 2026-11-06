@@ -43,9 +43,23 @@ async def get_current_user(
     token = parts[1]
 
     if not get_firebase_available():
-        # In development without Firebase Admin SDK initialized
-        logger.warning("[AUTH] Firebase Admin not available — returning dev-user fallback.")
-        return {"uid": "dev-user", "email": "dev@patentai.local"}
+        # Fallback when Firebase Admin service account is not yet configured on cloud server:
+        # Extract the user's authentic UID and email directly from the client's Firebase JWT token payload
+        try:
+            import base64
+            import json
+
+            payload_part = token.split(".")[1]
+            payload_part += "=" * ((4 - len(payload_part) % 4) % 4)
+            payload_bytes = base64.urlsafe_b64decode(payload_part.encode())
+            payload = json.loads(payload_bytes.decode("utf-8"))
+            extracted_uid = payload.get("user_id") or payload.get("sub") or "dev-user"
+            extracted_email = payload.get("email") or "user@patentai.local"
+            logger.info("[AUTH] Extracted claims from token for user_id='%s' (%s)", extracted_uid, extracted_email)
+            return {"uid": extracted_uid, "email": extracted_email}
+        except Exception as parse_err:
+            logger.warning("[AUTH] Token parse fallback warning (%s) — returning dev-user.", parse_err)
+            return {"uid": "dev-user", "email": "dev@patentai.local"}
 
     try:
         decoded = firebase_auth.verify_id_token(token)

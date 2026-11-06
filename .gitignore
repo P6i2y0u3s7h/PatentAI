@@ -12,6 +12,7 @@ dist/
 *.tsbuildinfo
 venv/
 *.log
+*.db
 **/firebase-service-account.json
 
 .vscode/
