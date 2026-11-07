@@ -34,11 +34,7 @@ def load_embedding_model() -> None:
             return
         logger.info("Loading embedding model: %s", settings.EMBEDDING_MODEL)
         try:
-            # Try loading cached local model first to avoid HuggingFace network retry delays
-            try:
-                _model = SentenceTransformer(settings.EMBEDDING_MODEL, local_files_only=True)
-            except Exception:
-                _model = SentenceTransformer(settings.EMBEDDING_MODEL)
+            _model = SentenceTransformer(settings.EMBEDDING_MODEL)
             _model_loaded = True
             logger.info("Embedding model loaded successfully.")
         except Exception as exc:

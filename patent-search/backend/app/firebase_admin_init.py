@@ -65,10 +65,10 @@ def initialize_firebase() -> bool:
                 logger.warning("[FIREBASE] Failed to read credentials file '%s': %s", cred_path, exc)
 
     if not sa_data:
-        logger.warning(
-            "[FIREBASE] No service account credentials found. "
+        logger.info(
+            "[FIREBASE] Cloud service account not configured. "
             "High-reliability local SQLite history storage and JWT UID extraction active. "
-            "(To enable Cloud Firestore, add FIREBASE_SERVICE_ACCOUNT_JSON in your cloud dashboard)."
+            "(To sync with Cloud Firestore, set FIREBASE_SERVICE_ACCOUNT_JSON in cloud environment variables)."
         )
         _firebase_available = False
         return False
