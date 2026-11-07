@@ -3,16 +3,49 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HeroWordReveal } from '../components/AnimatedText';
 import { useAuth } from '../hooks/useAuth';
-import { Cpu, LogIn, AlertCircle, Sparkles } from 'lucide-react';
+import { Cpu, LogIn, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+
+function formatAuthError(err: any): string {
+  const code = err?.code || '';
+  const msg = err?.message || '';
+
+  if (code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+    return 'Invalid email or password. If you do not have an account yet, please register below.';
+  }
+  if (code === 'auth/user-not-found') {
+    return 'No account registered with this email. Please click "Register here" below.';
+  }
+  if (code === 'auth/wrong-password') {
+    return 'Incorrect password. Please try again or use password reset.';
+  }
+  if (code === 'auth/invalid-email') {
+    return 'Please enter a valid email format (e.g., name@domain.com).';
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Access temporarily restricted due to multiple failed attempts. Please wait a few moments.';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return 'This domain is not authorized in Firebase Console. Add your production domain in Firebase Console > Authentication > Settings > Authorized domains.';
+  }
+  if (code === 'auth/popup-closed-by-user') {
+    return 'Google sign-in popup was closed before completing.';
+  }
+  return (
+    msg.replace(/^Firebase:\s*/i, '').replace(/\(auth\/[^)]+\)\.?/i, '').trim() ||
+    'Failed to sign in. Please check your credentials.'
+  );
+}
 
 export const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, loginWithGoogle, demoLogin } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +56,35 @@ export const Login: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in. Check email and password.');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setError('');
+    setDemoLoading(true);
+    try {
+      await demoLogin();
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(formatAuthError(err));
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(formatAuthError(err));
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -63,9 +122,29 @@ export const Login: React.FC = () => {
           </motion.p>
         </div>
 
+        {/* 1-Click Demo Quick Access */}
+        <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-cyan-300 flex items-center gap-1.5 font-mono">
+              <Sparkles size={13} className="text-cyan-400" /> Instant Access
+            </span>
+            <span className="text-[10px] text-slate-400">Verified Test Account</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={demoLoading || loading}
+            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/40 text-cyan-200 transition-all flex items-center justify-center gap-2 group shadow-sm disabled:opacity-50"
+          >
+            <CheckCircle2 size={14} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+            {demoLoading ? 'Signing in...' : '1-Click Quick Demo Sign In'}
+          </button>
+        </div>
+
         {error && (
-          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
-            <AlertCircle size={16} /> {error}
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 leading-relaxed">
+            <AlertCircle size={16} className="flex-shrink-0 text-red-400" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -78,7 +157,7 @@ export const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="engineer@company.com"
-              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 text-sm transition-colors"
             />
           </div>
 
@@ -90,22 +169,58 @@ export const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 text-sm transition-colors"
             />
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            disabled={loading || demoLoading}
+            className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-600 via-cyan-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
           >
-            <LogIn size={16} /> {loading ? 'Signing in...' : 'Sign In'}
+            <LogIn size={16} /> {loading ? 'Signing in...' : 'Sign In with Email'}
           </button>
         </form>
 
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800"></div>
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase font-mono">
+            <span className="bg-[#05070D] px-2 text-slate-500">or</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={googleLoading || loading}
+          className="w-full py-2.5 px-4 rounded-xl text-xs font-medium bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-200 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path
+              fill="#EA4335"
+              d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+            />
+            <path
+              fill="#4285F4"
+              d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1c0 2.8.7 5.4 1.9 7.8l3.7-3.1z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17.1c1.8 3.7 5.6 6.4 10.1 6.4z"
+            />
+          </svg>
+          {googleLoading ? 'Connecting...' : 'Continue with Google'}
+        </button>
+
         <div className="text-center text-xs text-slate-400 border-t border-slate-800 pt-4">
           Don't have an account?{' '}
-          <Link to="/register" className="text-blue-400 font-semibold hover:underline">
+          <Link to="/register" className="text-cyan-400 font-semibold hover:underline">
             Register here
           </Link>
         </div>
