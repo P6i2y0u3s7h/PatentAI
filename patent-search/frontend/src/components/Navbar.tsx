@@ -9,6 +9,7 @@ import {
   UserPlus,
   Sparkles,
   Scale,
+  Bot,
   ChevronDown,
   Menu,
   X,
@@ -24,7 +25,7 @@ export const Navbar: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
-  const isAiToolsActive = ['/compare', '/novelty'].some((p) =>
+  const isAiToolsActive = ['/compare', '/novelty', '/research'].some((p) =>
     location.pathname.startsWith(p)
   );
 
@@ -111,6 +112,28 @@ export const Navbar: React.FC = () => {
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
                   Advanced Patent Intelligence
                 </div>
+
+                <Link
+                  to="/research"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                    isActive('/research')
+                      ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-300">
+                    <Bot size={16} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <span>Research Agent</span>
+                      <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono border border-cyan-500/30">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Autonomous Prior-Art Explorer</div>
+                  </div>
+                </Link>
 
                 <Link
                   to="/compare"
@@ -229,6 +252,14 @@ export const Navbar: React.FC = () => {
             <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2 font-mono">
               AI Tools
             </div>
+            <Link
+              to="/research"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                isActive('/research') ? 'bg-cyan-600/20 text-cyan-300' : 'text-slate-300'
+              }`}
+            >
+              <Bot size={16} className="text-teal-300" /> Research Agent (Autonomous)
+            </Link>
             <Link
               to="/compare"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${

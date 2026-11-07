@@ -4,6 +4,7 @@ Ensures history and analytics always work reliably even when Firebase Admin serv
 account credentials are not yet configured in cloud environments.
 """
 
+import json
 import logging
 from pathlib import Path
 import sqlite3
@@ -23,7 +24,7 @@ _db_lock = threading.Lock()
 
 
 def _init_sqlite() -> None:
-    """Ensure search_history table exists in local SQLite database."""
+    """Ensure search_history and research_history tables exist in local SQLite database."""
     try:
         SQLITE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
@@ -41,6 +42,23 @@ def _init_sqlite() -> None:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_user_id ON search_history(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON search_history(created_at)")
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS research_history (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    invention_title TEXT NOT NULL,
+                    technical_field TEXT,
+                    query_count INTEGER DEFAULT 0,
+                    patents_found INTEGER DEFAULT 0,
+                    top_similarity REAL DEFAULT 0.0,
+                    created_at TEXT NOT NULL,
+                    summary TEXT,
+                    full_data_json TEXT
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_res_user_id ON research_history(user_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_res_created_at ON research_history(created_at)")
     except Exception as exc:
         logger.warning("[HISTORY] SQLite initialization error: %s", exc)
 
@@ -256,5 +274,245 @@ def delete_history_entry(entry_id: str, user_id: str) -> bool:
                 deleted = True
         except Exception as fs_err:
             logger.warning("[HISTORY] Firestore delete error: %s", fs_err)
+
+    return deleted
+
+
+# ── AI Patent Research Agent Persistence ────────────────────────────────────
+
+RESEARCH_COLLECTION = "research_history"
+
+
+def save_research_history(
+    user_id: str,
+    task_id: str,
+    invention_title: str,
+    technical_field: str | None,
+    query_count: int,
+    patents_found: int,
+    top_similarity: float,
+    summary: str,
+    full_data: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Save an AI Patent Research report to SQLite and Firestore.
+    """
+    now = datetime.now(tz=timezone.utc).isoformat()
+    raw_json = json.dumps(full_data, ensure_ascii=False)
+
+    record = {
+        "id": task_id,
+        "user_id": user_id,
+        "invention_title": invention_title,
+        "technical_field": technical_field or "General Technology",
+        "query_count": query_count,
+        "patents_found": patents_found,
+        "top_similarity": top_similarity,
+        "created_at": now,
+        "summary": summary,
+        "full_data": full_data,
+    }
+
+    # 1. SQLite storage
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO research_history
+                (id, user_id, invention_title, technical_field, query_count, patents_found, top_similarity, created_at, summary, full_data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    user_id,
+                    invention_title,
+                    technical_field or "General Technology",
+                    query_count,
+                    patents_found,
+                    top_similarity,
+                    now,
+                    summary,
+                    raw_json,
+                ),
+            )
+        logger.info("[RESEARCH] Saved research task '%s' to SQLite for '%s'.", task_id, user_id)
+    except Exception as sq_err:
+        logger.error("[RESEARCH] SQLite write error: %s", sq_err)
+
+    # 2. Firestore storage
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            db.collection(RESEARCH_COLLECTION).document(task_id).set({
+                "user_id": user_id,
+                "invention_title": invention_title,
+                "technical_field": technical_field or "General Technology",
+                "query_count": query_count,
+                "patents_found": patents_found,
+                "top_similarity": top_similarity,
+                "created_at": now,
+                "summary": summary,
+                "full_data_json": raw_json,
+            })
+            logger.info("[RESEARCH] Synced research task '%s' to Firestore.", task_id)
+        except Exception as fs_err:
+            logger.warning("[RESEARCH] Firestore sync failed: %s", fs_err)
+
+    return record
+
+
+def get_research_history(user_id: str, limit: int = 30) -> list[dict[str, Any]]:
+    """
+    Retrieve research history for a user, sorted descending by created_at.
+    """
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            query = (
+                db.collection(RESEARCH_COLLECTION)
+                .where("user_id", "in", [user_id, "dev-user"])
+                .order_by("created_at", direction="DESCENDING")
+                .limit(limit)
+            )
+            docs = query.stream()
+            results = []
+            for d in docs:
+                data = d.to_dict()
+                data["id"] = d.id
+                if "full_data_json" in data and not data.get("full_data"):
+                    try:
+                        data["full_data"] = json.loads(data["full_data_json"])
+                    except Exception:
+                        data["full_data"] = {}
+                results.append(data)
+            if results:
+                return results
+        except Exception as fs_err:
+            logger.warning("[RESEARCH] Firestore read error: %s. Falling back to SQLite.", fs_err)
+
+    # SQLite fallback
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, user_id, invention_title, technical_field, query_count, patents_found,
+                       top_similarity, created_at, summary, full_data_json
+                FROM research_history
+                WHERE user_id = ? OR user_id = 'dev-user'
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            )
+            rows = cursor.fetchall()
+            entries = []
+            for r in rows:
+                full_data = {}
+                if r["full_data_json"]:
+                    try:
+                        full_data = json.loads(r["full_data_json"])
+                    except Exception:
+                        pass
+
+                entries.append({
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "invention_title": r["invention_title"],
+                    "technical_field": r["technical_field"],
+                    "query_count": r["query_count"] or 0,
+                    "patents_found": r["patents_found"] or 0,
+                    "top_similarity": r["top_similarity"] or 0.0,
+                    "created_at": r["created_at"],
+                    "summary": r["summary"] or "",
+                    "full_data": full_data,
+                })
+            return entries
+    except Exception as sq_err:
+        logger.error("[RESEARCH] SQLite read error: %s", sq_err)
+        return []
+
+
+def get_research_by_id(task_id: str, user_id: str) -> dict[str, Any] | None:
+    """Retrieve full research report data by task_id."""
+    # 1. SQLite
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, user_id, invention_title, technical_field, query_count, patents_found,
+                       top_similarity, created_at, summary, full_data_json
+                FROM research_history
+                WHERE id = ? AND (user_id = ? OR user_id = 'dev-user')
+                """,
+                (task_id, user_id),
+            )
+            row = cursor.fetchone()
+            if row:
+                full_data = {}
+                if row["full_data_json"]:
+                    try:
+                        full_data = json.loads(row["full_data_json"])
+                    except Exception:
+                        pass
+                return {
+                    "id": row["id"],
+                    "user_id": row["user_id"],
+                    "invention_title": row["invention_title"],
+                    "technical_field": row["technical_field"],
+                    "query_count": row["query_count"] or 0,
+                    "patents_found": row["patents_found"] or 0,
+                    "top_similarity": row["top_similarity"] or 0.0,
+                    "created_at": row["created_at"],
+                    "summary": row["summary"] or "",
+                    "full_data": full_data,
+                }
+    except Exception as sq_err:
+        logger.warning("[RESEARCH] SQLite query error: %s", sq_err)
+
+    # 2. Firestore
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc = db.collection(RESEARCH_COLLECTION).document(task_id).get()
+            if doc.exists:
+                data = doc.to_dict() or {}
+                data["id"] = doc.id
+                if "full_data_json" in data and not data.get("full_data"):
+                    try:
+                        data["full_data"] = json.loads(data["full_data_json"])
+                    except Exception:
+                        data["full_data"] = {}
+                return data
+        except Exception as fs_err:
+            logger.warning("[RESEARCH] Firestore query error: %s", fs_err)
+
+    return None
+
+
+def delete_research_history(task_id: str, user_id: str) -> bool:
+    """Delete a research history entry."""
+    deleted = False
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            cur = conn.execute(
+                "DELETE FROM research_history WHERE id = ? AND (user_id = ? OR user_id = 'dev-user')",
+                (task_id, user_id),
+            )
+            if cur.rowcount > 0:
+                deleted = True
+    except Exception as sq_err:
+        logger.warning("[RESEARCH] SQLite delete error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc_ref = db.collection(RESEARCH_COLLECTION).document(task_id)
+            if doc_ref.get().exists:
+                doc_ref.delete()
+                deleted = True
+        except Exception as fs_err:
+            logger.warning("[RESEARCH] Firestore delete error: %s", fs_err)
 
     return deleted

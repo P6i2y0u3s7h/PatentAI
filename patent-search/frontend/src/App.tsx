@@ -16,6 +16,7 @@ import { NotFound } from './pages/NotFound';
 import { Assistant } from './pages/Assistant';
 import { Comparison } from './pages/Comparison';
 import { NoveltyAnalysis } from './pages/NoveltyAnalysis';
+import { ResearchAgent } from './pages/ResearchAgent';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,14 @@ const AppLayout: React.FC = () => {
             element={
               <ProtectedRoute>
                 <NoveltyAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/research"
+            element={
+              <ProtectedRoute>
+                <ResearchAgent />
               </ProtectedRoute>
             }
           />
