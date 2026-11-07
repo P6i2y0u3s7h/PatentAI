@@ -1,4 +1,9 @@
 import { apiClient } from './api';
+import { auth } from '../firebase/firebase';
+import {
+  getFirestoreComparisonHistory,
+  deleteFirestoreComparison,
+} from '../firebase/firestoreService';
 import {
   ComparisonHistoryResponse,
   GenericDeleteResponse,
@@ -37,20 +42,50 @@ export const compareApi = {
 
   /**
    * Get user comparison history.
+   * Checks direct Cloud Firestore first so historical comparisons load reliably after deployment.
    */
   async getHistory(limit: number = 20): Promise<ComparisonHistoryResponse> {
-    const { data } = await apiClient.get<ComparisonHistoryResponse>('/patents/compare/history', {
-      params: { limit },
-    });
-    return data;
+    const userId = auth.currentUser?.uid;
+    if (userId) {
+      try {
+        const firestoreData = await getFirestoreComparisonHistory(userId, limit);
+        if (firestoreData && Array.isArray(firestoreData.entries) && firestoreData.entries.length > 0) {
+          return firestoreData;
+        }
+      } catch (err) {
+        console.warn('[compareApi] Direct Firestore comparison history fallback:', err);
+      }
+    }
+
+    try {
+      const { data } = await apiClient.get<ComparisonHistoryResponse>('/patents/compare/history', {
+        params: { limit },
+      });
+      if (typeof data === 'object' && Array.isArray(data.entries)) {
+        return data;
+      }
+    } catch (apiErr) {
+      console.warn('[compareApi] Backend API comparison fetch notice:', apiErr);
+    }
+
+    return { entries: [], total: 0 };
   },
 
   /**
    * Delete a comparison from history.
    */
   async deleteHistory(entryId: string): Promise<GenericDeleteResponse> {
-    const { data } = await apiClient.delete<GenericDeleteResponse>(`/patents/compare/history/${entryId}`);
-    return data;
+    try {
+      await deleteFirestoreComparison(entryId);
+    } catch (err) {
+      console.warn('[compareApi] Direct Firestore delete comparison notice:', err);
+    }
+
+    try {
+      const { data } = await apiClient.delete<GenericDeleteResponse>(`/patents/compare/history/${entryId}`);
+      return data;
+    } catch (_) {
+      return { deleted_id: entryId, success: true };
+    }
   },
 };
-

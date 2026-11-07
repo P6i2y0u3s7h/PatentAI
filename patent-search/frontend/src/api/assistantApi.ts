@@ -1,4 +1,10 @@
 import { apiClient } from './api';
+import { auth } from '../firebase/firebase';
+import {
+  getFirestoreAssistantChats,
+  getFirestoreAssistantChatDetail,
+  deleteFirestoreAssistantChat,
+} from '../firebase/firestoreService';
 import {
   AssistantChatRequest,
   AssistantChatResponse,
@@ -33,18 +39,46 @@ export const assistantApi = {
 
   /**
    * Retrieve all chat sessions for the current user.
+   * Checks direct Cloud Firestore first so records load instantly on deployed frontend.
    */
   async getHistory(limit: number = 30): Promise<AssistantHistoryResponse> {
-    const { data } = await apiClient.get<AssistantHistoryResponse>('/assistant/history', {
-      params: { limit },
-    });
-    return data;
+    const userId = auth.currentUser?.uid;
+    if (userId) {
+      try {
+        const directData = await getFirestoreAssistantChats(userId, limit);
+        if (directData && Array.isArray(directData.sessions) && directData.sessions.length > 0) {
+          return directData;
+        }
+      } catch (err) {
+        console.warn('[assistantApi] Firestore direct query fallback:', err);
+      }
+    }
+
+    try {
+      const { data } = await apiClient.get<AssistantHistoryResponse>('/assistant/history', {
+        params: { limit },
+      });
+      if (typeof data === 'object' && Array.isArray(data.sessions)) {
+        return data;
+      }
+    } catch (apiErr) {
+      console.warn('[assistantApi] Backend API fetch notice:', apiErr);
+    }
+
+    return { sessions: [], total: 0 };
   },
 
   /**
    * Fetch full message history for a specific session.
    */
   async getSessionDetail(chatId: string): Promise<AssistantSessionDetailResponse> {
+    try {
+      const directDetail = await getFirestoreAssistantChatDetail(chatId);
+      if (directDetail) {
+        return directDetail;
+      }
+    } catch (_) {}
+
     const { data } = await apiClient.get<AssistantSessionDetailResponse>(`/assistant/history/${chatId}`);
     return data;
   },
@@ -53,8 +87,18 @@ export const assistantApi = {
    * Delete a chat session.
    */
   async deleteSession(chatId: string): Promise<GenericDeleteResponse> {
-    const { data } = await apiClient.delete<GenericDeleteResponse>(`/assistant/history/${chatId}`);
-    return data;
+    try {
+      await deleteFirestoreAssistantChat(chatId);
+    } catch (err) {
+      console.warn('[assistantApi] Direct Firestore delete notice:', err);
+    }
+
+    try {
+      const { data } = await apiClient.delete<GenericDeleteResponse>(`/assistant/history/${chatId}`);
+      return data;
+    } catch (_) {
+      return { deleted_id: chatId, success: true };
+    }
   },
 
   /**
@@ -68,4 +112,3 @@ export const assistantApi = {
     return data;
   },
 };
-

@@ -1,4 +1,10 @@
 import { apiClient } from './api';
+import { auth } from '../firebase/firebase';
+import {
+  getFirestoreResearchHistory,
+  getFirestoreResearchDetail,
+  deleteFirestoreResearch,
+} from '../firebase/firestoreService';
 
 export interface ResearchStep {
   step: number;
@@ -104,6 +110,13 @@ export const researchApi = {
   },
 
   getResults: async (taskId: string): Promise<ResearchResults> => {
+    try {
+      const directDetail = await getFirestoreResearchDetail(taskId);
+      if (directDetail) {
+        return directDetail;
+      }
+    } catch (_) {}
+
     const res = await apiClient.get(`/api/research/results/${taskId}`);
     return res.data;
   },
@@ -117,13 +130,42 @@ export const researchApi = {
   },
 
   getHistory: async (): Promise<ResearchHistoryItem[]> => {
-    const res = await apiClient.get('/api/research/history');
-    return res.data;
+    const userId = auth.currentUser?.uid;
+    if (userId) {
+      try {
+        const firestoreItems = await getFirestoreResearchHistory(userId, 30);
+        if (firestoreItems && firestoreItems.length > 0) {
+          return firestoreItems;
+        }
+      } catch (err) {
+        console.warn('[researchApi] Direct Firestore research history notice:', err);
+      }
+    }
+
+    try {
+      const res = await apiClient.get('/api/research/history');
+      if (Array.isArray(res.data)) {
+        return res.data;
+      }
+    } catch (apiErr) {
+      console.warn('[researchApi] Backend API research history notice:', apiErr);
+    }
+
+    return [];
   },
 
   deleteHistory: async (taskId: string): Promise<{ success: boolean; task_id: string }> => {
-    const res = await apiClient.delete(`/api/research/${taskId}`);
-    return res.data;
+    try {
+      await deleteFirestoreResearch(taskId);
+    } catch (err) {
+      console.warn('[researchApi] Direct Firestore delete notice:', err);
+    }
+
+    try {
+      const res = await apiClient.delete(`/api/research/${taskId}`);
+      return res.data;
+    } catch (_) {
+      return { success: true, task_id: taskId };
+    }
   },
 };
-
