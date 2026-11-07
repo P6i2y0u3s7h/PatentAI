@@ -368,15 +368,26 @@ def get_research_history(user_id: str, limit: int = 30) -> list[dict[str, Any]]:
     db = _get_firestore_client()
     if db is not None:
         try:
-            query = (
-                db.collection(RESEARCH_COLLECTION)
-                .where("user_id", "in", [user_id, "dev-user"])
-                .order_by("created_at", direction="DESCENDING")
-                .limit(limit)
-            )
-            docs = query.stream()
+            raw_docs = []
+            try:
+                query = (
+                    db.collection(RESEARCH_COLLECTION)
+                    .where("user_id", "==", user_id)
+                    .order_by("created_at", direction="DESCENDING")
+                    .limit(limit)
+                )
+                raw_docs = list(query.stream())
+            except Exception:
+                # If composite index is pending/missing in Firestore, query without order_by and sort in memory
+                query = (
+                    db.collection(RESEARCH_COLLECTION)
+                    .where("user_id", "==", user_id)
+                    .limit(limit)
+                )
+                raw_docs = list(query.stream())
+
             results = []
-            for d in docs:
+            for d in raw_docs:
                 data = d.to_dict()
                 data["id"] = d.id
                 if "full_data_json" in data and not data.get("full_data"):
@@ -386,7 +397,8 @@ def get_research_history(user_id: str, limit: int = 30) -> list[dict[str, Any]]:
                         data["full_data"] = {}
                 results.append(data)
             if results:
-                return results
+                results.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
+                return results[:limit]
         except Exception as fs_err:
             logger.warning("[RESEARCH] Firestore read error: %s. Falling back to SQLite.", fs_err)
 

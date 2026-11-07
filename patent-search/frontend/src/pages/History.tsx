@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { HeroWordReveal } from '../components/AnimatedText';
 import { useSearchHistory } from '../hooks/useSearch';
 import { HistoryTable } from '../components/HistoryTable';
-import { History as HistoryIcon } from 'lucide-react';
+import { History as HistoryIcon, AlertTriangle } from 'lucide-react';
 
 export const History: React.FC = () => {
-  const { data: historyData, isLoading } = useSearchHistory(100);
+  const { data: historyData, isLoading, error } = useSearchHistory(100);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -36,6 +36,16 @@ export const History: React.FC = () => {
           All past prior-art queries, similarity thresholds, and top matched results saved in your cloud session.
         </motion.p>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-3">
+          <AlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-200">Unable to synchronize history records</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">{error.message || 'Check your network connection or verify that the production backend API URL is active.'}</p>
+          </div>
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

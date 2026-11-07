@@ -29,7 +29,14 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+        <p className="text-xs font-mono text-cyan-300 tracking-wider">Verifying Session...</p>
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };

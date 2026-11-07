@@ -1,7 +1,41 @@
 import axios, { AxiosError } from 'axios';
 import { auth } from '../firebase/firebase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+/**
+ * Resolves the appropriate backend API base URL for both development and production.
+ *
+ * In production (e.g. deployed to Vercel/cloud):
+ * - If VITE_API_BASE_URL is configured with an https:// backend URL, uses it.
+ * - If VITE_API_BASE_URL is missing or mistakenly pointing to localhost, logs a clear diagnostic
+ *   message so the deployment engineer knows exactly which Vercel variable to set.
+ * - Strips any trailing slashes for clean URL concatenation.
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalhost = isBrowser && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+  );
+
+  if (isBrowser && !isLocalhost) {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      console.warn(
+        `[PatentAI Production Notice] Running on production host '${window.location.hostname}', ` +
+        `but VITE_API_BASE_URL is set to '${envUrl || 'undefined'}'. ` +
+        `To fetch live search data, set VITE_API_BASE_URL in your Vercel dashboard to your live Railway URL.`
+      );
+      return '/api';
+    }
+    return envUrl.replace(/\/+$/, '');
+  }
+
+  // Local development fallback
+  return envUrl || 'http://localhost:8000';
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Typed API error that preserves HTTP status and backend error codes.
@@ -78,12 +112,13 @@ apiClient.interceptors.response.use(
 
     // Provide user-friendly messages for known HTTP status codes
     const friendlyMessages: Record<number, string> = {
+      0: 'Cannot reach backend service. Please verify that your production API URL is active and CORS is permitted.',
       400: 'Invalid request. Please check your input.',
-      401: 'Please login to continue.',
-      403: 'You are not authorized to perform this action.',
+      401: 'Session expired or unauthenticated. Please sign in to access your saved data.',
+      403: 'You do not have permission to access this resource.',
       413: 'The uploaded file is too large. Maximum size is 20 MB.',
       415: 'Only PDF files are supported. Please upload a valid PDF.',
-      422: message, // Use backend message (extraction failed, short query, etc.)
+      422: message,
       429: 'Too many requests. Please wait a moment before trying again.',
       503: 'The search service is temporarily unavailable. Please try again shortly.',
       500: 'An internal server error occurred. Please try again.',

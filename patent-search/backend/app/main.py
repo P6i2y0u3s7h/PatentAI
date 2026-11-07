@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -67,7 +67,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
-        allow_origin_regex=r"https://.*\.vercel\.app",
+        allow_origin_regex=r"https://.*(\.vercel\.app|\.up\.railway\.app|\.pages\.dev)",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -85,7 +85,7 @@ def create_app() -> FastAPI:
     # ── Exception Handlers ────────────────────────────────────────────────────
     register_exception_handlers(app)
 
-    # ── Routers ───────────────────────────────────────────────────────────────
+    # ── Routers (Dual-mounted: root & /api for reverse proxy compatibility) ───
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(search.router)
@@ -93,6 +93,16 @@ def create_app() -> FastAPI:
     app.include_router(assistant.router)
     app.include_router(patents.router)
     app.include_router(research.router)
+
+    # Prefix router so that /api/search, /api/assistant, etc. also resolve directly
+    api_router = APIRouter(prefix="/api")
+    api_router.include_router(health.router)
+    api_router.include_router(auth.router)
+    api_router.include_router(search.router)
+    api_router.include_router(summary.router)
+    api_router.include_router(assistant.router)
+    api_router.include_router(patents.router)
+    app.include_router(api_router)
 
     @app.get("/", include_in_schema=False)
     async def root():

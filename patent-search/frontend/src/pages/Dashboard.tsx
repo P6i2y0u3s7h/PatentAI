@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { HeroWordReveal } from '../components/AnimatedText';
 import { useSearchHistory } from '../hooks/useSearch';
 import { HistoryTable } from '../components/HistoryTable';
-import { Search, TrendingUp, Cpu, Award, Activity } from 'lucide-react';
+import { Search, TrendingUp, Cpu, Award, Activity, AlertTriangle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const Dashboard: React.FC = () => {
-  const { data: historyData, isLoading } = useSearchHistory(20);
+  const { data: historyData, isLoading, error } = useSearchHistory(20);
 
   const entries = historyData?.entries || [];
   const totalSearches = entries.length;
@@ -56,6 +56,16 @@ export const Dashboard: React.FC = () => {
           Overview of your patent prior-art searches and similarity metrics across the neural FAISS index.
         </motion.p>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-3">
+          <AlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-200">Unable to load dashboard metrics from backend</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">{error.message || 'Check your network connection or verify that the production backend API URL is active.'}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <motion.div
