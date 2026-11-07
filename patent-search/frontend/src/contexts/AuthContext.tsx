@@ -15,7 +15,6 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  demoLogin: () => Promise<void>;
   register: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -26,7 +25,6 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => {},
   loginWithGoogle: async () => {},
-  demoLogin: async () => {},
   register: async () => {},
   logout: async () => {},
   resetPassword: async () => {},
@@ -74,11 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithPopup(auth, googleProvider);
   };
 
-  const demoLogin = async () => {
-    // Quick demo login for testing and portfolio reviews
-    await signInWithEmailAndPassword(auth, 'test@example.com', 'password123');
-  };
-
   const register = async (email: string, pass: string) => {
     await createUserWithEmailAndPassword(auth, email.trim(), pass);
   };
@@ -98,7 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         login,
         loginWithGoogle,
-        demoLogin,
         register,
         logout,
         resetPassword,

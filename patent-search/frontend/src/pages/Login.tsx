@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HeroWordReveal } from '../components/AnimatedText';
 import { useAuth } from '../hooks/useAuth';
-import { Cpu, LogIn, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Cpu, LogIn, AlertCircle } from 'lucide-react';
 
 function formatAuthError(err: any): string {
   const code = err?.code || '';
@@ -37,14 +37,13 @@ function formatAuthError(err: any): string {
 }
 
 export const Login: React.FC = () => {
-  const { login, loginWithGoogle, demoLogin } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,19 +58,6 @@ export const Login: React.FC = () => {
       setError(formatAuthError(err));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setError('');
-    setDemoLoading(true);
-    try {
-      await demoLogin();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(formatAuthError(err));
-    } finally {
-      setDemoLoading(false);
     }
   };
 
@@ -122,25 +108,6 @@ export const Login: React.FC = () => {
           </motion.p>
         </div>
 
-        {/* 1-Click Demo Quick Access */}
-        <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-cyan-300 flex items-center gap-1.5 font-mono">
-              <Sparkles size={13} className="text-cyan-400" /> Instant Access
-            </span>
-            <span className="text-[10px] text-slate-400">Verified Test Account</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={demoLoading || loading}
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/40 text-cyan-200 transition-all flex items-center justify-center gap-2 group shadow-sm disabled:opacity-50"
-          >
-            <CheckCircle2 size={14} className="text-cyan-400 group-hover:scale-110 transition-transform" />
-            {demoLoading ? 'Signing in...' : '1-Click Quick Demo Sign In'}
-          </button>
-        </div>
-
         {error && (
           <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 leading-relaxed">
             <AlertCircle size={16} className="flex-shrink-0 text-red-400" />
@@ -175,7 +142,7 @@ export const Login: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading || demoLoading}
+            disabled={loading}
             className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-600 via-cyan-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
           >
             <LogIn size={16} /> {loading ? 'Signing in...' : 'Sign In with Email'}
