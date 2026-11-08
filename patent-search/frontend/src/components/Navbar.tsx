@@ -13,6 +13,9 @@ import {
   ChevronDown,
   Menu,
   X,
+  FileCheck,
+  Network,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileMenu } from './ProfileMenu';
@@ -25,9 +28,14 @@ export const Navbar: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
-  const isAiToolsActive = ['/compare', '/novelty', '/research'].some((p) =>
-    location.pathname.startsWith(p)
-  );
+  const isAiToolsActive = [
+    '/compare',
+    '/novelty',
+    '/research',
+    '/draft-reviewer',
+    '/similarity-network',
+    '/claim-chart',
+  ].some((p) => location.pathname.startsWith(p));
 
   // Close AI Tools dropdown on outside click
   useEffect(() => {
@@ -108,14 +116,82 @@ export const Navbar: React.FC = () => {
             </button>
 
             {isAiToolsOpen && (
-              <div className="absolute left-0 mt-2.5 w-64 rounded-2xl bg-[#0B1020]/95 border border-white/[0.09] p-2 shadow-2xl backdrop-blur-2xl animate-fadeIn z-50">
+              <div className="absolute left-0 mt-2.5 w-72 rounded-2xl bg-[#0B1020]/95 border border-white/[0.09] p-2 shadow-2xl backdrop-blur-2xl animate-fadeIn z-50">
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
                   Advanced Patent Intelligence
                 </div>
 
                 <Link
+                  to="/draft-reviewer"
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                    isActive('/draft-reviewer')
+                      ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-300">
+                    <FileCheck size={16} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <span>Draft Reviewer</span>
+                      <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono border border-cyan-500/30">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Formalities & Claims Audit</div>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/similarity-network"
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                    isActive('/similarity-network')
+                      ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-300">
+                    <Network size={16} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <span>Similarity Network</span>
+                      <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-mono border border-purple-500/30">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Interactive Cluster Graph</div>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/claim-chart"
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                    isActive('/claim-chart')
+                      ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300">
+                    <FileSpreadsheet size={16} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <span>Claim Chart</span>
+                      <span className="px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-mono border border-indigo-500/30">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Element-by-Element Mapping</div>
+                  </div>
+                </Link>
+
+                <div className="my-1 border-t border-slate-800/80" />
+
+                <Link
                   to="/research"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                     isActive('/research')
                       ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30'
                       : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
@@ -125,25 +201,20 @@ export const Navbar: React.FC = () => {
                     <Bot size={16} />
                   </div>
                   <div>
-                    <div className="font-semibold text-slate-200 flex items-center gap-1.5">
-                      <span>Research Agent</span>
-                      <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono border border-cyan-500/30">
-                        NEW
-                      </span>
-                    </div>
+                    <div className="font-semibold text-slate-200">Research Agent</div>
                     <div className="text-[11px] text-slate-400">Autonomous Prior-Art Explorer</div>
                   </div>
                 </Link>
 
                 <Link
                   to="/compare"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                     isActive('/compare')
                       ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
                       : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                     <Scale size={16} />
                   </div>
                   <div>
@@ -154,7 +225,7 @@ export const Navbar: React.FC = () => {
 
                 <Link
                   to="/novelty"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                     isActive('/novelty')
                       ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
                       : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
@@ -252,6 +323,30 @@ export const Navbar: React.FC = () => {
             <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2 font-mono">
               AI Tools
             </div>
+            <Link
+              to="/draft-reviewer"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                isActive('/draft-reviewer') ? 'bg-cyan-600/20 text-cyan-300' : 'text-slate-300'
+              }`}
+            >
+              <FileCheck size={16} className="text-cyan-400" /> AI Draft Reviewer
+            </Link>
+            <Link
+              to="/similarity-network"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                isActive('/similarity-network') ? 'bg-cyan-600/20 text-cyan-300' : 'text-slate-300'
+              }`}
+            >
+              <Network size={16} className="text-purple-400" /> Similarity Network
+            </Link>
+            <Link
+              to="/claim-chart"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                isActive('/claim-chart') ? 'bg-cyan-600/20 text-cyan-300' : 'text-slate-300'
+              }`}
+            >
+              <FileSpreadsheet size={16} className="text-indigo-400" /> Claim Chart Generator
+            </Link>
             <Link
               to="/research"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${

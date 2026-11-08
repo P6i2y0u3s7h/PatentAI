@@ -298,3 +298,169 @@ class NoveltyHistoryResponse(BaseModel):
     entries: list[NoveltyHistoryEntry]
     total: int
 
+
+# ── 1. AI Patent Draft Reviewer Models ─────────────────────────────────────────
+
+
+class DraftIssue(BaseModel):
+    id: str
+    title: str
+    original_text: str = Field(default="", description="Verbatim snippet from draft with issue")
+    explanation: str = Field(..., description="Why this constitutes a potential issue")
+    severity: str = Field(..., description="'High', 'Medium', or 'Low'")
+    category: str = Field(..., description="'technical', 'structure', 'claims', or 'missing_info'")
+    suggested_improvement: str = Field(..., description="Actionable improved wording or limitation")
+    reason: str = Field(..., description="Technical or legal drafting rationale")
+
+
+class DraftSectionStatus(BaseModel):
+    section_name: str
+    present: bool
+    status: str = Field(..., description="'Complete', 'Needs Improvement', or 'Missing'")
+    details: str
+
+
+class DraftReviewResponse(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    technical_field: str
+    review_type: str
+    quality_score: float = Field(..., ge=0.0, le=100.0, description="AI-generated draft quality indicator (0-100)")
+    score_verdict: str
+    sections: list[DraftSectionStatus]
+    issues: list[DraftIssue]
+    technical_issues_count: int
+    structure_issues_count: int
+    claims_issues_count: int
+    missing_info_count: int
+    overall_summary: str
+    recommendations: list[str]
+    disclaimer: str
+    created_at: str
+    processing_time_ms: float
+
+
+class DraftReviewHistoryEntry(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    technical_field: str
+    quality_score: float
+    issue_count: int
+    created_at: str
+
+
+class DraftReviewHistoryResponse(BaseModel):
+    entries: list[DraftReviewHistoryEntry]
+    total: int
+
+
+# ── 2. Interactive Patent Similarity Network Models ────────────────────────────
+
+
+class NetworkNode(BaseModel):
+    id: str
+    title: str
+    abstract: str
+    assignee: str
+    publication_date: str
+    ipc_class: str
+    category: str
+    similarity_score: float = Field(..., ge=0.0, le=1.0)
+    shared_concepts: list[str] = Field(default_factory=list)
+    source_url: str
+    is_central: bool = False
+
+
+class NetworkEdge(BaseModel):
+    source: str
+    target: str
+    similarity: float = Field(..., ge=0.0, le=1.0)
+    label: str = ""
+    shared_keywords: list[str] = Field(default_factory=list)
+
+
+class PatentNetworkResponse(BaseModel):
+    id: str
+    user_id: str
+    central_patent_id: str
+    central_title: str
+    nodes: list[NetworkNode]
+    edges: list[NetworkEdge]
+    categories: list[str]
+    total_nodes: int
+    total_edges: int
+    avg_similarity: float
+    created_at: str
+    processing_time_ms: float
+
+
+class PatentNetworkHistoryEntry(BaseModel):
+    id: str
+    user_id: str
+    central_patent_id: str
+    central_title: str
+    node_count: int
+    created_at: str
+
+
+class PatentNetworkHistoryResponse(BaseModel):
+    entries: list[PatentNetworkHistoryEntry]
+    total: int
+
+
+# ── 3. AI Claim Chart Generator Models ─────────────────────────────────────────
+
+
+class ClaimElementComparison(BaseModel):
+    claim_number: str
+    element_id: str
+    element_text: str
+    is_preamble: bool = False
+    parent_claim: Optional[str] = None
+    evidence_text: str
+    evidence_source: str
+    match_status: str = Field(..., description="'Match', 'Partial Match', 'Not Found', or 'Requires Manual Review'")
+    explanation: str
+
+
+class ClaimChartResponse(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    doc_a_name: str
+    doc_b_name: str
+    doc_a_type: str = "Patent Claims"
+    doc_b_type: str = "Comparison Document"
+    elements: list[ClaimElementComparison]
+    total_elements: int
+    matches_count: int
+    partial_matches_count: int
+    not_found_count: int
+    requires_review_count: int
+    coverage_score: float = Field(..., ge=0.0, le=100.0, description="Percentage of claims with evidence mapped")
+    summary_analysis: str
+    risk_level: str
+    recommendations: list[str]
+    disclaimer: str
+    created_at: str
+    processing_time_ms: float
+
+
+class ClaimChartHistoryEntry(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    doc_a_name: str
+    doc_b_name: str
+    coverage_score: float
+    total_elements: int
+    created_at: str
+
+
+class ClaimChartHistoryResponse(BaseModel):
+    entries: list[ClaimChartHistoryEntry]
+    total: int
+
+

@@ -17,6 +17,9 @@ import { Assistant } from './pages/Assistant';
 import { Comparison } from './pages/Comparison';
 import { NoveltyAnalysis } from './pages/NoveltyAnalysis';
 import { ResearchAgent } from './pages/ResearchAgent';
+import { DraftReviewer } from './pages/DraftReviewer';
+import { SimilarityNetwork } from './pages/SimilarityNetwork';
+import { ClaimChart } from './pages/ClaimChart';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,6 +107,30 @@ const AppLayout: React.FC = () => {
             element={
               <ProtectedRoute>
                 <ResearchAgent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/draft-reviewer"
+            element={
+              <ProtectedRoute>
+                <DraftReviewer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/similarity-network"
+            element={
+              <ProtectedRoute>
+                <SimilarityNetwork />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/claim-chart"
+            element={
+              <ProtectedRoute>
+                <ClaimChart />
               </ProtectedRoute>
             }
           />

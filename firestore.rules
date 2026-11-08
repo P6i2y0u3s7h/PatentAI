@@ -53,7 +53,28 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
     }
 
-    // 6. User Profiles Collection
+    // 6. AI Patent Draft Reviews Collection
+    match /draft_reviews/{reviewId} {
+      allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+    }
+
+    // 7. Interactive Patent Similarity Networks Collection
+    match /patent_networks/{networkId} {
+      allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+    }
+
+    // 8. AI Claim Charts Collection
+    match /claim_charts/{chartId} {
+      allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+    }
+
+    // 9. User Profiles Collection
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }

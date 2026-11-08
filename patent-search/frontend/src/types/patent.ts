@@ -235,3 +235,171 @@ export interface GenericDeleteResponse {
   success: boolean;
 }
 
+// ── 1. AI Patent Draft Reviewer Types ─────────────────────────────────────────
+
+export interface DraftIssue {
+  id: string;
+  title: string;
+  original_text: string;
+  explanation: string;
+  severity: 'High' | 'Medium' | 'Low';
+  category: 'technical' | 'structure' | 'claims' | 'missing_info';
+  suggested_improvement: string;
+  reason: string;
+}
+
+export interface DraftSectionStatus {
+  section_name: string;
+  present: boolean;
+  status: 'Complete' | 'Needs Improvement' | 'Missing';
+  details: string;
+}
+
+export interface DraftReviewResponse {
+  id: string;
+  user_id: string;
+  title: string;
+  technical_field: string;
+  review_type: string;
+  quality_score: number;
+  score_verdict: string;
+  sections: DraftSectionStatus[];
+  issues: DraftIssue[];
+  technical_issues_count: number;
+  structure_issues_count: number;
+  claims_issues_count: number;
+  missing_info_count: number;
+  overall_summary: string;
+  recommendations: string[];
+  disclaimer: string;
+  created_at: string;
+  processing_time_ms: number;
+}
+
+export interface DraftReviewHistoryEntry {
+  id: string;
+  user_id: string;
+  title: string;
+  technical_field: string;
+  quality_score: number;
+  issue_count: number;
+  created_at: string;
+}
+
+export interface DraftReviewHistoryResponse {
+  entries: DraftReviewHistoryEntry[];
+  total: number;
+}
+
+// ── 2. Interactive Patent Similarity Network Types ────────────────────────────
+
+export interface NetworkNode {
+  id: string;
+  title: string;
+  abstract: string;
+  assignee: string;
+  publication_date: string;
+  ipc_class: string;
+  category: string;
+  similarity_score: number;
+  shared_concepts: string[];
+  source_url: string;
+  is_central: boolean;
+  // Simulation layout coordinates
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+}
+
+export interface NetworkEdge {
+  source: string;
+  target: string;
+  similarity: number;
+  label: string;
+  shared_keywords: string[];
+}
+
+export interface PatentNetworkResponse {
+  id: string;
+  user_id: string;
+  central_patent_id: string;
+  central_title: string;
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  categories: string[];
+  total_nodes: number;
+  total_edges: number;
+  avg_similarity: number;
+  created_at: string;
+  processing_time_ms: number;
+}
+
+export interface PatentNetworkHistoryEntry {
+  id: string;
+  user_id: string;
+  central_patent_id: string;
+  central_title: string;
+  node_count: number;
+  created_at: string;
+}
+
+export interface PatentNetworkHistoryResponse {
+  entries: PatentNetworkHistoryEntry[];
+  total: number;
+}
+
+// ── 3. AI Claim Chart Generator Types ─────────────────────────────────────────
+
+export interface ClaimElementComparison {
+  claim_number: string;
+  element_id: string;
+  element_text: string;
+  is_preamble: boolean;
+  parent_claim?: string | null;
+  evidence_text: string;
+  evidence_source: string;
+  match_status: 'Match' | 'Partial Match' | 'Not Found' | 'Requires Manual Review';
+  explanation: string;
+}
+
+export interface ClaimChartResponse {
+  id: string;
+  user_id: string;
+  title: string;
+  doc_a_name: string;
+  doc_b_name: string;
+  doc_a_type: string;
+  doc_b_type: string;
+  elements: ClaimElementComparison[];
+  total_elements: number;
+  matches_count: number;
+  partial_matches_count: number;
+  not_found_count: number;
+  requires_review_count: number;
+  coverage_score: number;
+  summary_analysis: string;
+  risk_level: string;
+  recommendations: string[];
+  disclaimer: string;
+  created_at: string;
+  processing_time_ms: number;
+}
+
+export interface ClaimChartHistoryEntry {
+  id: string;
+  user_id: string;
+  title: string;
+  doc_a_name: string;
+  doc_b_name: string;
+  coverage_score: number;
+  total_elements: number;
+  created_at: string;
+}
+
+export interface ClaimChartHistoryResponse {
+  entries: ClaimChartHistoryEntry[];
+  total: number;
+}
+
+

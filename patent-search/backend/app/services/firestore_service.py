@@ -11,7 +11,7 @@ import sqlite3
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from app.firebase_admin_init import get_firebase_available
 from app.models import HistoryEntry
@@ -19,12 +19,16 @@ from app.models import HistoryEntry
 logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "search_history"
+RESEARCH_COLLECTION = "research_history"
+DRAFT_REVIEWS_COLLECTION = "draft_reviews"
+PATENT_NETWORKS_COLLECTION = "patent_networks"
+CLAIM_CHARTS_COLLECTION = "claim_charts"
 SQLITE_DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "search_history.db"
 _db_lock = threading.Lock()
 
 
 def _init_sqlite() -> None:
-    """Ensure search_history and research_history tables exist in local SQLite database."""
+    """Ensure all history and analysis tables exist in local SQLite database."""
     try:
         SQLITE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
@@ -59,6 +63,52 @@ def _init_sqlite() -> None:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_res_user_id ON research_history(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_res_created_at ON research_history(created_at)")
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS draft_reviews (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    technical_field TEXT,
+                    review_type TEXT,
+                    quality_score REAL DEFAULT 0.0,
+                    issue_count INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    full_data_json TEXT
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_dr_user_id ON draft_reviews(user_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_dr_created_at ON draft_reviews(created_at)")
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS patent_networks (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    central_patent_id TEXT NOT NULL,
+                    central_title TEXT NOT NULL,
+                    node_count INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    full_data_json TEXT
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_pn_user_id ON patent_networks(user_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_pn_created_at ON patent_networks(created_at)")
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS claim_charts (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    doc_a_name TEXT,
+                    doc_b_name TEXT,
+                    coverage_score REAL DEFAULT 0.0,
+                    total_elements INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    full_data_json TEXT
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_cc_user_id ON claim_charts(user_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_cc_created_at ON claim_charts(created_at)")
     except Exception as exc:
         logger.warning("[HISTORY] SQLite initialization error: %s", exc)
 
@@ -528,3 +578,486 @@ def delete_research_history(task_id: str, user_id: str) -> bool:
             logger.warning("[RESEARCH] Firestore delete error: %s", fs_err)
 
     return deleted
+
+
+# ── 1. Draft Reviews Persistence ──────────────────────────────────────────────
+
+
+def save_draft_review(data: dict) -> str:
+    """Save a patent draft review to SQLite and Cloud Firestore."""
+    review_id = data.get("id") or f"rev_{uuid.uuid4().hex[:12]}"
+    user_id = data.get("user_id") or "anonymous"
+    title = data.get("title", "Untitled Draft Review")
+    tech_field = data.get("technical_field", "")
+    review_type = data.get("review_type", "Comprehensive Review")
+    quality_score = float(data.get("quality_score", 0.0))
+    issue_count = len(data.get("issues", []))
+    created_at = data.get("created_at") or datetime.now(timezone.utc).isoformat()
+    full_data_json = json.dumps(data, default=str)
+
+    # 1. SQLite
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO draft_reviews
+                (id, user_id, title, technical_field, review_type, quality_score, issue_count, created_at, full_data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (review_id, user_id, title, tech_field, review_type, quality_score, issue_count, created_at, full_data_json),
+            )
+    except Exception as sq_err:
+        logger.warning("[DRAFT_REVIEW] SQLite save error: %s", sq_err)
+
+    # 2. Firestore
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            db.collection(DRAFT_REVIEWS_COLLECTION).document(review_id).set({
+                "id": review_id,
+                "user_id": user_id,
+                "title": title,
+                "technical_field": tech_field,
+                "review_type": review_type,
+                "quality_score": quality_score,
+                "issue_count": issue_count,
+                "created_at": created_at,
+                "full_data_json": full_data_json,
+            })
+        except Exception as fs_err:
+            logger.warning("[DRAFT_REVIEW] Firestore save error: %s", fs_err)
+
+    return review_id
+
+
+def get_draft_review_by_id(review_id: str, user_id: str) -> Optional[dict]:
+    """Retrieve full draft review data by ID."""
+    # 1. SQLite
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT full_data_json FROM draft_reviews WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')",
+                (review_id, user_id, user_id),
+            )
+            row = cursor.fetchone()
+            if row and row["full_data_json"]:
+                return json.loads(row["full_data_json"])
+    except Exception as sq_err:
+        logger.warning("[DRAFT_REVIEW] SQLite read error: %s", sq_err)
+
+    # 2. Firestore
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc = db.collection(DRAFT_REVIEWS_COLLECTION).document(review_id).get()
+            if doc.exists:
+                d = doc.to_dict() or {}
+                if "full_data_json" in d:
+                    return json.loads(d["full_data_json"])
+                return d
+        except Exception as fs_err:
+            logger.warning("[DRAFT_REVIEW] Firestore read error: %s", fs_err)
+
+    return None
+
+
+def get_draft_reviews_by_user(user_id: str, limit: int = 30) -> list[dict]:
+    """Retrieve review history for a user."""
+    items: list[dict] = []
+    # 1. SQLite
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, user_id, title, technical_field, quality_score, issue_count, created_at
+                FROM draft_reviews
+                WHERE user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous'
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, user_id, limit),
+            )
+            for r in cursor.fetchall():
+                items.append({
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "title": r["title"],
+                    "technical_field": r["technical_field"] or "",
+                    "quality_score": float(r["quality_score"] or 0.0),
+                    "issue_count": int(r["issue_count"] or 0),
+                    "created_at": r["created_at"],
+                })
+        if items:
+            return items
+    except Exception as sq_err:
+        logger.warning("[DRAFT_REVIEW] SQLite history error: %s", sq_err)
+
+    # 2. Firestore fallback
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            docs = (
+                db.collection(DRAFT_REVIEWS_COLLECTION)
+                .where("user_id", "==", user_id)
+                .limit(limit)
+                .stream()
+            )
+            for doc in docs:
+                d = doc.to_dict() or {}
+                items.append({
+                    "id": doc.id,
+                    "user_id": d.get("user_id", user_id),
+                    "title": d.get("title", "Untitled Review"),
+                    "technical_field": d.get("technical_field", ""),
+                    "quality_score": float(d.get("quality_score", 0.0)),
+                    "issue_count": int(d.get("issue_count", 0)),
+                    "created_at": str(d.get("created_at", "")),
+                })
+            items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        except Exception as fs_err:
+            logger.warning("[DRAFT_REVIEW] Firestore history error: %s", fs_err)
+
+    return items
+
+
+def delete_draft_review(review_id: str, user_id: str) -> bool:
+    """Delete a draft review entry."""
+    deleted = False
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            cur = conn.execute("DELETE FROM draft_reviews WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')", (review_id, user_id, user_id))
+            if cur.rowcount > 0:
+                deleted = True
+    except Exception as sq_err:
+        logger.warning("[DRAFT_REVIEW] SQLite delete error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc_ref = db.collection(DRAFT_REVIEWS_COLLECTION).document(review_id)
+            if doc_ref.get().exists:
+                doc_ref.delete()
+                deleted = True
+        except Exception as fs_err:
+            logger.warning("[DRAFT_REVIEW] Firestore delete error: %s", fs_err)
+
+    return deleted
+
+
+# ── 2. Patent Similarity Networks Persistence ─────────────────────────────────
+
+
+def save_patent_network(data: dict) -> str:
+    """Save a patent similarity network to SQLite and Cloud Firestore."""
+    net_id = data.get("id") or f"net_{uuid.uuid4().hex[:12]}"
+    user_id = data.get("user_id") or "anonymous"
+    central_id = data.get("central_patent_id", "")
+    central_title = data.get("central_title", "")
+    node_count = len(data.get("nodes", []))
+    created_at = data.get("created_at") or datetime.now(timezone.utc).isoformat()
+    full_data_json = json.dumps(data, default=str)
+
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO patent_networks
+                (id, user_id, central_patent_id, central_title, node_count, created_at, full_data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (net_id, user_id, central_id, central_title, node_count, created_at, full_data_json),
+            )
+    except Exception as sq_err:
+        logger.warning("[PATENT_NETWORK] SQLite save error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            db.collection(PATENT_NETWORKS_COLLECTION).document(net_id).set({
+                "id": net_id,
+                "user_id": user_id,
+                "central_patent_id": central_id,
+                "central_title": central_title,
+                "node_count": node_count,
+                "created_at": created_at,
+                "full_data_json": full_data_json,
+            })
+        except Exception as fs_err:
+            logger.warning("[PATENT_NETWORK] Firestore save error: %s", fs_err)
+
+    return net_id
+
+
+def get_patent_network_by_id(net_id: str, user_id: str) -> Optional[dict]:
+    """Retrieve full patent network data by ID."""
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT full_data_json FROM patent_networks WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')",
+                (net_id, user_id, user_id),
+            )
+            row = cursor.fetchone()
+            if row and row["full_data_json"]:
+                return json.loads(row["full_data_json"])
+    except Exception as sq_err:
+        logger.warning("[PATENT_NETWORK] SQLite read error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc = db.collection(PATENT_NETWORKS_COLLECTION).document(net_id).get()
+            if doc.exists:
+                d = doc.to_dict() or {}
+                if "full_data_json" in d:
+                    return json.loads(d["full_data_json"])
+                return d
+        except Exception as fs_err:
+            logger.warning("[PATENT_NETWORK] Firestore read error: %s", fs_err)
+
+    return None
+
+
+def get_patent_networks_by_user(user_id: str, limit: int = 30) -> list[dict]:
+    """Retrieve patent networks history for a user."""
+    items: list[dict] = []
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, user_id, central_patent_id, central_title, node_count, created_at
+                FROM patent_networks
+                WHERE user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous'
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, user_id, limit),
+            )
+            for r in cursor.fetchall():
+                items.append({
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "central_patent_id": r["central_patent_id"],
+                    "central_title": r["central_title"],
+                    "node_count": int(r["node_count"] or 0),
+                    "created_at": r["created_at"],
+                })
+        if items:
+            return items
+    except Exception as sq_err:
+        logger.warning("[PATENT_NETWORK] SQLite history error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            docs = (
+                db.collection(PATENT_NETWORKS_COLLECTION)
+                .where("user_id", "==", user_id)
+                .limit(limit)
+                .stream()
+            )
+            for doc in docs:
+                d = doc.to_dict() or {}
+                items.append({
+                    "id": doc.id,
+                    "user_id": d.get("user_id", user_id),
+                    "central_patent_id": d.get("central_patent_id", ""),
+                    "central_title": d.get("central_title", "Central Patent"),
+                    "node_count": int(d.get("node_count", 0)),
+                    "created_at": str(d.get("created_at", "")),
+                })
+            items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        except Exception as fs_err:
+            logger.warning("[PATENT_NETWORK] Firestore history error: %s", fs_err)
+
+    return items
+
+
+def delete_patent_network(net_id: str, user_id: str) -> bool:
+    """Delete a patent network entry."""
+    deleted = False
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            cur = conn.execute("DELETE FROM patent_networks WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')", (net_id, user_id, user_id))
+            if cur.rowcount > 0:
+                deleted = True
+    except Exception as sq_err:
+        logger.warning("[PATENT_NETWORK] SQLite delete error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc_ref = db.collection(PATENT_NETWORKS_COLLECTION).document(net_id)
+            if doc_ref.get().exists:
+                doc_ref.delete()
+                deleted = True
+        except Exception as fs_err:
+            logger.warning("[PATENT_NETWORK] Firestore delete error: %s", fs_err)
+
+    return deleted
+
+
+# ── 3. Claim Charts Persistence ───────────────────────────────────────────────
+
+
+def save_claim_chart(data: dict) -> str:
+    """Save an AI Claim Chart to SQLite and Cloud Firestore."""
+    chart_id = data.get("id") or f"chart_{uuid.uuid4().hex[:12]}"
+    user_id = data.get("user_id") or "anonymous"
+    title = data.get("title", "Patent Claim Chart")
+    doc_a_name = data.get("doc_a_name", "Document A")
+    doc_b_name = data.get("doc_b_name", "Document B")
+    coverage_score = float(data.get("coverage_score", 0.0))
+    total_elements = len(data.get("elements", []))
+    created_at = data.get("created_at") or datetime.now(timezone.utc).isoformat()
+    full_data_json = json.dumps(data, default=str)
+
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO claim_charts
+                (id, user_id, title, doc_a_name, doc_b_name, coverage_score, total_elements, created_at, full_data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (chart_id, user_id, title, doc_a_name, doc_b_name, coverage_score, total_elements, created_at, full_data_json),
+            )
+    except Exception as sq_err:
+        logger.warning("[CLAIM_CHART] SQLite save error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            db.collection(CLAIM_CHARTS_COLLECTION).document(chart_id).set({
+                "id": chart_id,
+                "user_id": user_id,
+                "title": title,
+                "doc_a_name": doc_a_name,
+                "doc_b_name": doc_b_name,
+                "coverage_score": coverage_score,
+                "total_elements": total_elements,
+                "created_at": created_at,
+                "full_data_json": full_data_json,
+            })
+        except Exception as fs_err:
+            logger.warning("[CLAIM_CHART] Firestore save error: %s", fs_err)
+
+    return chart_id
+
+
+def get_claim_chart_by_id(chart_id: str, user_id: str) -> Optional[dict]:
+    """Retrieve full claim chart data by ID."""
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT full_data_json FROM claim_charts WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')",
+                (chart_id, user_id, user_id),
+            )
+            row = cursor.fetchone()
+            if row and row["full_data_json"]:
+                return json.loads(row["full_data_json"])
+    except Exception as sq_err:
+        logger.warning("[CLAIM_CHART] SQLite read error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc = db.collection(CLAIM_CHARTS_COLLECTION).document(chart_id).get()
+            if doc.exists:
+                d = doc.to_dict() or {}
+                if "full_data_json" in d:
+                    return json.loads(d["full_data_json"])
+                return d
+        except Exception as fs_err:
+            logger.warning("[CLAIM_CHART] Firestore read error: %s", fs_err)
+
+    return None
+
+
+def get_claim_charts_by_user(user_id: str, limit: int = 30) -> list[dict]:
+    """Retrieve claim charts history for a user."""
+    items: list[dict] = []
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, user_id, title, doc_a_name, doc_b_name, coverage_score, total_elements, created_at
+                FROM claim_charts
+                WHERE user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous'
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, user_id, limit),
+            )
+            for r in cursor.fetchall():
+                items.append({
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "title": r["title"],
+                    "doc_a_name": r["doc_a_name"] or "",
+                    "doc_b_name": r["doc_b_name"] or "",
+                    "coverage_score": float(r["coverage_score"] or 0.0),
+                    "total_elements": int(r["total_elements"] or 0),
+                    "created_at": r["created_at"],
+                })
+        if items:
+            return items
+    except Exception as sq_err:
+        logger.warning("[CLAIM_CHART] SQLite history error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            docs = (
+                db.collection(CLAIM_CHARTS_COLLECTION)
+                .where("user_id", "==", user_id)
+                .limit(limit)
+                .stream()
+            )
+            for doc in docs:
+                d = doc.to_dict() or {}
+                items.append({
+                    "id": doc.id,
+                    "user_id": d.get("user_id", user_id),
+                    "title": d.get("title", "Patent Claim Chart"),
+                    "doc_a_name": d.get("doc_a_name", ""),
+                    "doc_b_name": d.get("doc_b_name", ""),
+                    "coverage_score": float(d.get("coverage_score", 0.0)),
+                    "total_elements": int(d.get("total_elements", 0)),
+                    "created_at": str(d.get("created_at", "")),
+                })
+            items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        except Exception as fs_err:
+            logger.warning("[CLAIM_CHART] Firestore history error: %s", fs_err)
+
+    return items
+
+
+def delete_claim_chart(chart_id: str, user_id: str) -> bool:
+    """Delete a claim chart entry."""
+    deleted = False
+    try:
+        with _db_lock, sqlite3.connect(str(SQLITE_DB_PATH)) as conn:
+            cur = conn.execute("DELETE FROM claim_charts WHERE id = ? AND (user_id = ? OR user_id = 'dev-user' OR ? = 'anonymous')", (chart_id, user_id, user_id))
+            if cur.rowcount > 0:
+                deleted = True
+    except Exception as sq_err:
+        logger.warning("[CLAIM_CHART] SQLite delete error: %s", sq_err)
+
+    db = _get_firestore_client()
+    if db is not None:
+        try:
+            doc_ref = db.collection(CLAIM_CHARTS_COLLECTION).document(chart_id)
+            if doc_ref.get().exists:
+                doc_ref.delete()
+                deleted = True
+        except Exception as fs_err:
+            logger.warning("[CLAIM_CHART] Firestore delete error: %s", fs_err)
+
+    return deleted
+

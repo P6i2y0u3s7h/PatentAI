@@ -15,7 +15,18 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import InMemoryRateLimiter, RequestTimingMiddleware, SecurityHeadersMiddleware
 from app.firebase_admin_init import initialize_firebase
-from app.routers import assistant, auth, health, patents, research, search, summary
+from app.routers import (
+    assistant,
+    auth,
+    claim_chart,
+    draft_reviewer,
+    health,
+    patent_network,
+    patents,
+    research,
+    search,
+    summary,
+)
 from app.services.embedding_service import load_embedding_model
 from app.services.search_service import load_index
 from app.services.summary_service import load_summarization_model
@@ -93,8 +104,11 @@ def create_app() -> FastAPI:
     app.include_router(assistant.router)
     app.include_router(patents.router)
     app.include_router(research.router)
+    app.include_router(draft_reviewer.router)
+    app.include_router(patent_network.router)
+    app.include_router(claim_chart.router)
 
-    # Prefix router so that /api/search, /api/assistant, etc. also resolve directly
+    # Prefix router so that /api/search, /api/assistant, /api/draft-review, etc. resolve directly
     api_router = APIRouter(prefix="/api")
     api_router.include_router(health.router)
     api_router.include_router(auth.router)
@@ -102,6 +116,9 @@ def create_app() -> FastAPI:
     api_router.include_router(summary.router)
     api_router.include_router(assistant.router)
     api_router.include_router(patents.router)
+    api_router.include_router(draft_reviewer.router)
+    api_router.include_router(patent_network.router)
+    api_router.include_router(claim_chart.router)
     app.include_router(api_router)
 
     @app.get("/", include_in_schema=False)
